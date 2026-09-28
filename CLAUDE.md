@@ -12,6 +12,7 @@ englishfinders.com is a WordPress site becoming a CEFR-first (A1–C2) English-l
 - `docs/`: audit + roadmap status.
 - `english-finders-study/`: English Finders Study plugin (8 practice tools + English Level Test + PracticeBox, which adds the practice box and level row to blog posts). Baseline import 1.16.0 = `104499a`.
 - `tools/learn-hubs/`: re-runnable builders for `/learn/`, the six level hubs and the four skill hubs (sent through `execute-php`).
+- `tools/a1-deepen/`: sources and build/deploy scripts for the rewritten A1 lessons; reuse the method for other levels.
 - Not in the repo yet (live only): **Word Games Pro** (`word-games-pro`, v2.12.15, internal namespace `WordUnscrambleCheats`, tables `wp_wuc_*`). Import it as an unmodified baseline commit before changing it (see "Workflow").
 
 Each plugin was imported as an unmodified "as deployed" commit first, so `git diff <baseline>` shows exactly what we changed.
@@ -75,6 +76,6 @@ If a request is blocked, send `return 1;` to confirm the connection still works,
 - The primary menu has a top-level "Level Test" item (menu item 35880).
 - 12 broken leftover pages (Paid Memberships Pro, cart, shop, forum, post-grid) were trashed on 2026-09-28 with 301s (Rank Math redirects 17–19); backup in `ef-backups/leftover-pages-20260928-085001.json`. QSM quizzes are embedded in 66 live posts (~12% of traffic): keep them.
 - `/learn/` (35893) and the level hubs `/learn/a1/` … `/learn/c2/` (35896–35911) were built on 2026-09-28. The menu's "Learn" item points to `/learn/`. Builder scripts are in `tools/learn-hubs/`; re-run them to refresh the counts.
-- Roadmap recommendations 1, 2 and 4 are done, and 3 is partly done (owner-scoped); see `docs/roadmap-status.md` for what's left in 3, 5 and 6.
+- Roadmap recommendations 1, 2 and 4 are done; 3 is partly done (owner-scoped). 5 is done as scoped: lesson meta descriptions, the post level row (Study 1.17.0), the four skill hubs, and all 84 A1 lessons rewritten as a pilot (`tools/a1-deepen/`). Proposed CEFR levels for unlevelled posts await owner review in `docs/post-level-proposal.md`. See `docs/roadmap-status.md` for what's left in 3, 5 and 6.
 - **Hub pages:** use the `englishfinders-hub-page-builder` skill's recipe, but **ignore its final `LiteSpeed\Purge::purge_all()` step**. It conflicts with the caching rule above, so purge by post ID.
 - Page-level traffic: GA4 via Site Kit works from `execute-php` by calling the module directly (`(new \Google\Site_Kit\Core\Modules\Modules( \Google\Site_Kit\Plugin::instance()->context() ))->get_module( 'analytics-4' )->get_data( 'report', … )`). The REST route rejects the OAuth connection, and Rank Math's GSC table is empty.
