@@ -10,7 +10,9 @@ englishfinders.com is a WordPress site becoming a CEFR-first (A1–C2) English-l
 - `english-finders-account/`: English Finders Account plugin (sign-up/login incl. Google, My Account, level/progress/mistakes/leaderboard/certificates UI, Pro membership via Paddle, spam gates).
 - `releases/<plugin>/<version>/`: the four release artifacts per version: production zip, source zip, `.patch` against the previous version, `RELEASE-REPORT.md` with the SHA-256 manifest.
 - `docs/`: audit + roadmap status.
-- Not in the repo yet (live only): **Word Games Pro** (`word-games-pro`, v2.12.15, internal namespace `WordUnscrambleCheats`, tables `wp_wuc_*`) and **English Finders Study** (`english-finders-study`, v1.16.0, 8 practice tools + English Level Test + PracticeBox). Import one as an unmodified baseline commit before changing it (see "Workflow").
+- `english-finders-study/`: English Finders Study plugin (8 practice tools + English Level Test + PracticeBox, which adds the practice box and level row to blog posts). Baseline import 1.16.0 = `104499a`.
+- `tools/learn-hubs/`: re-runnable builders for `/learn/`, the six level hubs and the four skill hubs (sent through `execute-php`).
+- Not in the repo yet (live only): **Word Games Pro** (`word-games-pro`, v2.12.15, internal namespace `WordUnscrambleCheats`, tables `wp_wuc_*`). Import it as an unmodified baseline commit before changing it (see "Workflow").
 
 Each plugin was imported as an unmodified "as deployed" commit first, so `git diff <baseline>` shows exactly what we changed.
 
@@ -66,7 +68,7 @@ If a request is blocked, send `return 1;` to confirm the connection still works,
 |---|---|---|
 | English Finders Core | **1.15.0** (usage tracking) | yes |
 | English Finders Account | **0.20.0** (sign-up → level test welcome) | yes |
-| English Finders Study | 1.16.0 | no |
+| English Finders Study | **1.17.0** (level row on blog posts) | yes |
 | Word Games Pro | 2.12.15 | no |
 
 - Accounts: 1,375 after the spam cleanup. 13,004 spam accounts were deleted on 2026-09-28; backup at `ef-backups/spam-users-20260928-074201.json.gz`. The sign-up spam route was closed by Account 0.16.0 (Turnstile + honeypot + throttle on `/sign-up/`).

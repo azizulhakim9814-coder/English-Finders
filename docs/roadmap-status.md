@@ -108,15 +108,31 @@ Owner chose group A only; the rest were reviewed and deliberately left as they a
   - Every tool page's level select defaults to "Any level". A `?level=` URL parameter would let the level-hub cards deep-link into the right level, but that needs a Study plugin change.
   - C2 has only 4 articles.
 
-### 5. Deepen content: TODO
-- 126 of 399 lessons are under 1,500 characters. Every level except C2 has 21–31 of them.
-- No lesson has audio or video (no listening material).
-- **Blog volume at B2–C2 is thin:** 18 / 20 / 4 posts. 88 posts have no CEFR level category.
-- **Hub pages:**
-  - Reading, Writing, Speaking and Listening are near-empty (Elementor only, about 3.8K of data).
-  - Grammar and Vocabulary were last edited in March 2025; IELTS in 2023.
-- 248 posts have no internal links.
-- **Rank Math:** set focus keywords and titles for lessons, quizzes and courses.
+### 5. Deepen content: **IN PROGRESS 2026-09-28**
+The owner chose all four parts (A–D) and piloted C on A1.
+
+- **B. Lesson meta descriptions: DONE.** All 399 lessons now have a Rank Math description of 90–158 characters, built from each lesson's own opening text and level. Verified in the page `<head>`. The generator was ported to PHP and run server-side, after a dry run whose md5 matched the local output (a large JSON batch had tripped the WAF).
+- **A. Posts → Learn: DONE (code); levels awaiting owner review.**
+  - **Study 1.17.0:** a post in a level category gets a "Written for B1 Intermediate learners" row in its practice box, linking `/learn/b1/` and the free B1 course. Levelled posts with no practice box get a compact level-only box. Verified live on a B1 post, an A1 post that already links a tool, and an unlevelled post. All 335 posts were purged by ID. Release in `releases/english-finders-study/1.17.0/`.
+  - The 88 posts without a level: see `docs/post-level-proposal.md`.
+    - Proposed levels for 5 posts, plus 2 optional.
+    - The other 81 are study advice, IELTS strategy, word-game lists or reviews; they stay unlevelled.
+    - Spotted a content bug in the same review: "abley" in post 32900.
+- **D. Skill hubs: DONE.** `/reading/`, `/writing/`, `/speaking/` and `/listening/` (34387, 34386, 34388, 34389) were rebuilt with the card-grid recipe.
+  - Each has three grids: practice tools + Level Test + Learn by Level; the skill's lessons picked from the A1–C2 courses; the skill's articles.
+  - Each then embeds one tool: Reading Quiz, Sentence Builder, Pronunciation Practice or Spelling Quiz.
+  - Card counts: 16 / 30 / 24 / 12.
+  - Backup of the old pages and the Additional CSS: `ef-backups/skill-hubs-20260928-093340.json`.
+  - Builder: `tools/learn-hubs/skill_pages.php`.
+  - Grammar (5573) was left as is.
+- **C. Deepen the A1 course:** pilot, see below.
+- **Still open:**
+  - 126 of 399 lessons are under 1,500 characters. Every level except C2 has 21–31 of them.
+  - No lesson has audio or video (no listening material). The Listening hub is honest about this: 3 lessons + 4 articles + audio tools.
+  - **Blog volume at B2–C2 is thin:** 18 / 20 / 4 posts.
+  - 248 posts have no internal links.
+  - **Rank Math:** focus keywords and titles for lessons, quizzes and courses.
+  - Grammar and Vocabulary hubs were last edited in March 2025; IELTS in 2023.
 - Relevant skills: `cefr-course-builder`, `englishfinders-content-optimizer`.
 
 ### 6. New features (after 1–5): TODO
