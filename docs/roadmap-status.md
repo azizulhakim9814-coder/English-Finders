@@ -108,7 +108,7 @@ Owner chose group A only; the rest were reviewed and deliberately left as they a
   - Every tool page's level select defaults to "Any level". A `?level=` URL parameter would let the level-hub cards deep-link into the right level, but that needs a Study plugin change.
   - C2 has only 4 articles.
 
-### 5. Deepen content: **IN PROGRESS 2026-09-28**
+### 5. Deepen content: **A–D DONE 2026-09-28 (C as an A1 pilot); post levels await owner review**
 The owner chose all four parts (A–D) and piloted C on A1.
 
 - **B. Lesson meta descriptions: DONE.** All 399 lessons now have a Rank Math description of 90–158 characters, built from each lesson's own opening text and level. Verified in the page `<head>`. The generator was ported to PHP and run server-side, after a dry run whose md5 matched the local output (a large JSON batch had tripped the WAF).
@@ -125,9 +125,17 @@ The owner chose all four parts (A–D) and piloted C on A1.
   - Backup of the old pages and the Additional CSS: `ef-backups/skill-hubs-20260928-093340.json`.
   - Builder: `tools/learn-hubs/skill_pages.php`.
   - Grammar (5573) was left as is.
-- **C. Deepen the A1 course:** pilot, see below.
+- **C. Deepen the A1 course (pilot): DONE.** All 84 A1 lessons (course 34908) were rewritten to one template, and every write was hash-verified.
+  - Core lessons: Hook → Notice → Rule → Watch Out → 8 practice items with a collapsible answer key → Your Turn → Connect → CEFR tag.
+  - Can-Do tasks get steps, useful language, a model answer and a checklist. Worksheets keep their printable parts and images and gain extra online parts.
+  - Visible text: every lesson was under 1,500 characters before. Now the median is 2,121 and the range 1,479–2,880; the two shortest are worksheets.
+  - All Connect links resolve (200).
+  - The 72 non-worksheet A1 meta descriptions were regenerated from the new text.
+  - Errors in the old content fixed on the way: a wrong total in Worksheet 6, wrong adjective order in the Worksheet 8 key, a promised audio clip and certificate in the Final module, and internal tool names in Connect buttons.
+  - Sources and method: `tools/a1-deepen/`. Backups: `ef-backups/a1-lessons-20260928-093847.json`, `ef-backups/a1-meta-desc-20260928-102959.json`.
+  - **Next:** owner review of a few A1 lessons, then the same pass for A2 (26 lessons under 1,500 characters) and upward.
 - **Still open:**
-  - 126 of 399 lessons are under 1,500 characters. Every level except C2 has 21–31 of them.
+  - Lesson depth at A2–C2: the A1 pilot method (`tools/a1-deepen/`) is ready to reuse.
   - No lesson has audio or video (no listening material). The Listening hub is honest about this: 3 lessons + 4 articles + audio tools.
   - **Blog volume at B2–C2 is thin:** 18 / 20 / 4 posts.
   - 248 posts have no internal links.

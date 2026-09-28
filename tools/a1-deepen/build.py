@@ -7,7 +7,7 @@ BTN = ('<p style="margin:10px 0 16px 0;"><a href="{url}" target="_blank" rel="no
 BASE = 'https://englishfinders.com'
 VALID = {'/grammar-quiz/', '/vocabulary-quiz/', '/spelling-quiz/', '/match-the-definition/', '/error-correction/',
          '/sentence-builder/', '/reading-quiz/', '/pronunciation-practice/', '/english-dictionary-search/',
-         '/word-ladder/', '/word-chain-challenge/', '/hangman-reimagined/', '/word-practice/', '/learn/a1/',
+         '/word-ladder/', '/word-chain-challenge/', '/hangman-reimagined/', '/word-practice/', '/learn/a1/', '/learn/a2/',
          '/word-finder/a1-words/', '/vocabulary/', '/grammar/', '/english-level-test/', '/speaking/', '/writing/',
          '/reading/', '/listening/', '/daily-unscramble/'}
 
