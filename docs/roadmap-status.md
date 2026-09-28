@@ -88,14 +88,25 @@ Owner chose group A only; the rest were reviewed and deliberately left as they a
 - **QSM is alive, so do not remove it.** 66 posts embed QSM quizzes; those posts had about 2,960 views in 90 days (~12% of site traffic), with 20–120 completed quizzes a month in 2026. Top pages: 50 English grammar quiz (412), types of pronouns (434), types of morphemes (425). Consolidating into Study tools or Tutor would be a content migration project, not a cleanup.
 - Rank Math 404 log: only one-off multi-word dictionary lookups (e.g. `dictionary/figure out`); nothing to redirect.
 
-### 4. `/learn/` landing page + one hub per CEFR level: TODO
-- "Learn" in the menu currently points to `/grammar/`. There is no `/learn/` page.
-- Build per-level hubs (A1…C2), each combining:
-  - the level's course
-  - its CEFR word list (`/word-finder/a1-words/`…)
-  - its level category posts (categories under parent 1668: A1 59, A2 74, B1 72, B2 18, C1 20, C2 4 posts)
-  - level-appropriate practice
-- Use the `englishfinders-hub-page-builder` skill (Elementor). Ask which page-building approach to use before building.
+### 4. `/learn/` landing page + one hub per CEFR level: **DONE 2026-09-28**
+- **Built** as Elementor pages with the site hub recipe (owner's choice), cards + embedded practice, at `/learn/a1/` … `/learn/c2/`:
+
+  | Page | ID | Contents |
+  |---|---|---|
+  | `/learn/` | 35893 | Level Test + A1…C2 cards (units/lessons pills); "Learn by skill" grid of the six skill hubs |
+  | `/learn/a1/` … `/learn/c2/` | 35896, 35899, 35902, 35905, 35908, 35911 | The level's course, words, articles, Level Test and the 8 practice tools (12 cards); then Grammar Quiz + Vocabulary Quiz embedded, preset to the level (`[efs_grammar_quiz level="B1" breadcrumb="0" schema="0"]` etc.) |
+
+- **Menu:** "Learn" (item 34377) now points to `/learn/` (was `/grammar/`); confirmed after saving. All published pages and courses were purged by ID.
+- **Hover CSS:** in Additional CSS between the `EF-LEARN-HUBS-START` and `EF-LEARN-HUBS-END` markers.
+- **Verified:**
+  - Live HTML: 200s, no fatal errors, correct card counts, order and titles, all titles linked, pagination hidden.
+  - Embedded quizzes render with the level pre-selected (select + config), and their scripts load.
+  - Local Chromium at 1280/900/390 px: 3/2/1 columns, banner 96 px, no clipping. The 350 px card height reads as 352 only because the local test page lacks the theme's border-box rule.
+- **Builder scripts:** `tools/learn-hubs/`. Re-run them to refresh the counts written into the cards after content grows.
+- **Follow-ups:**
+  - The Learn dropdown is long (22 items); consider trimming it now that `/learn/` exists.
+  - Every tool page's level select defaults to "Any level". A `?level=` URL parameter would let the level-hub cards deep-link into the right level, but that needs a Study plugin change.
+  - C2 has only 4 articles.
 
 ### 5. Deepen content: TODO
 - 126 of 399 lessons are under 1,500 characters. Every level except C2 has 21–31 of them.

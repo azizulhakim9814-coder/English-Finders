@@ -1,0 +1,26 @@
+# Learn hubs builder (`/learn/` and `/learn/a1/` … `/learn/c2/`)
+
+These scripts build the Learn hub pages on englishfinders.com as Elementor pages, following the site's hub recipe (hero + CSS-grid card widget, 12 cards per page). Each is sent as the `code` of the Novamira `novamira/execute-php` ability.
+
+| Page | ID | Contents |
+|---|---|---|
+| `/learn/` | 35893 | Level Test + six level cards; "Learn by skill" grid (Grammar, Vocabulary, Reading, Writing, Speaking, Listening hubs) |
+| `/learn/a1/` … `/learn/c2/` | 35896, 35899, 35902, 35905, 35908, 35911 | The level's course, words, articles, Level Test and the 8 practice tools; then Grammar Quiz + Vocabulary Quiz embedded, preset to that level |
+
+## Running it
+
+1. Build or refresh `/learn/`: send `lib.php` + `levels.php` + `learn_page.php` concatenated, as one request.
+2. Build or refresh the level pages: send `lib.php` + `levels.php` + `level_pages.php` concatenated, as one request.
+   - To rebuild only some levels, prepend `$efl_only = array( 'B1' );`.
+
+`efl_save_page()` updates a page that already exists (matched by path) rather than creating a duplicate, so re-running is safe. Each run:
+- recomputes the lesson counts from Tutor, the word counts from `wp_wuc_words.cefr_level` and the article counts from the level categories;
+- regenerates Elementor element IDs;
+- rewrites the page's Rank Math description and focus keyword.
+
+**Re-run after adding lessons, words or level articles**: the numbers on the cards are written in at build time.
+
+## Rules these scripts already follow
+- `<style>` / `<script>` tags are assembled on the server (`'<' . 'script>'`) so Wordfence doesn't block the request.
+- Pages are purged by post ID only. **Never** purge-all LiteSpeed (see `CLAUDE.md`). If the menu changes, also purge all published pages and courses by ID.
+- The hover-lift CSS lives in Additional CSS between the `EF-LEARN-HUBS-START` and `EF-LEARN-HUBS-END` markers, scoped to the 7 page IDs above. Add any new page ID there.

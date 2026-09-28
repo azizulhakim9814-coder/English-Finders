@@ -72,5 +72,7 @@ If a request is blocked, send `return 1;` to confirm the connection still works,
 - Accounts: 1,375 after the spam cleanup. 13,004 spam accounts were deleted on 2026-09-28; backup at `ef-backups/spam-users-20260928-074201.json.gz`. The sign-up spam route was closed by Account 0.16.0 (Turnstile + honeypot + throttle on `/sign-up/`).
 - The primary menu has a top-level "Level Test" item (menu item 35880).
 - 12 broken leftover pages (Paid Memberships Pro, cart, shop, forum, post-grid) were trashed on 2026-09-28 with 301s (Rank Math redirects 17–19); backup in `ef-backups/leftover-pages-20260928-085001.json`. QSM quizzes are embedded in 66 live posts (~12% of traffic): keep them.
-- Roadmap recommendations 1 and 2 are done and 3 is partly done (owner-scoped); see `docs/roadmap-status.md` for what's left in 3–6.
+- `/learn/` (35893) and the level hubs `/learn/a1/` … `/learn/c2/` (35896–35911) were built on 2026-09-28. The menu's "Learn" item points to `/learn/`. Builder scripts are in `tools/learn-hubs/`; re-run them to refresh the counts.
+- Roadmap recommendations 1, 2 and 4 are done, and 3 is partly done (owner-scoped); see `docs/roadmap-status.md` for what's left in 3, 5 and 6.
+- **Hub pages:** use the `englishfinders-hub-page-builder` skill's recipe, but **ignore its final `LiteSpeed\Purge::purge_all()` step**. It conflicts with the caching rule above, so purge by post ID.
 - Page-level traffic: GA4 via Site Kit works from `execute-php` by calling the module directly (`(new \Google\Site_Kit\Core\Modules\Modules( \Google\Site_Kit\Plugin::instance()->context() ))->get_module( 'analytics-4' )->get_data( 'report', … )`). The REST route rejects the OAuth connection, and Rank Math's GSC table is empty.
