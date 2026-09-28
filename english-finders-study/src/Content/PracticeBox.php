@@ -20,8 +20,16 @@
  * tool or the level test, in feeds, excerpts, or anywhere but the post
  * itself. Same for every visitor, so cached pages are fine.
  *
+ * 1.17.0: posts in a CEFR level category (A1 ... C2) also get a "Continue
+ * at your level" row linking that level's Learn hub (/learn/b1/) and its
+ * course. 46% of site traffic lands on articles, while the courses and
+ * level hubs had almost none. When the practice part is skipped because
+ * the post already links a tool, a compact level-only box is shown
+ * instead, so every levelled post leads into its level.
+ *
  * Filters: efs_practice_box_enabled (bool, WP_Post), efs_practice_box_tool
- * (tool page slug, WP_Post; '' for no box).
+ * (tool page slug, WP_Post; '' for no box), efs_level_links_enabled (bool,
+ * WP_Post).
  *
  * @package EnglishFindersStudy
  */
@@ -61,6 +69,28 @@ final class PracticeBox {
 
 	private const NO_BOX = array( 'reviews', 'gear' );
 
+	/** Level category slug => CEFR level, lowest level first. */
+	public const LEVEL_CATEGORIES = array(
+		'a1-english-beginner'           => 'A1',
+		'a2-english-elementary'         => 'A2',
+		'b1-english-intermediate'       => 'B1',
+		'b2-english-upper-intermediate' => 'B2',
+		'c1-english-advanced'           => 'C1',
+		'c2-english-proficiency'        => 'C2',
+	);
+
+	public const LEVEL_NAMES = array(
+		'A1' => 'Beginner',
+		'A2' => 'Elementary',
+		'B1' => 'Intermediate',
+		'B2' => 'Upper Intermediate',
+		'C1' => 'Advanced',
+		'C2' => 'Proficiency',
+	);
+
+	/** Parent page of the level hubs: /learn/a1/ ... /learn/c2/. */
+	public const LEARN_PAGE = 'learn';
+
 	private const FALLBACK = 'vocabulary-quiz';
 
 	private static bool $style_printed = false;
@@ -80,17 +110,81 @@ final class PracticeBox {
 		if ( ! $post instanceof \WP_Post || ! (bool) apply_filters( 'efs_practice_box_enabled', true, $post ) ) {
 			return $content;
 		}
+		$cats  = self::category_slugs( $post );
+		$level = (bool) apply_filters( 'efs_level_links_enabled', true, $post ) ? self::level_links( self::level_for( $cats ) ) : array();
+
 		if ( self::links_practice( $content ) ) {
-			return $content;
+			return array() !== $level ? $content . self::render_level_only( $level ) : $content;
 		}
 
-		$slug = (string) apply_filters( 'efs_practice_box_tool', self::tool_for( self::category_slugs( $post ) ), $post );
+		$slug = (string) apply_filters( 'efs_practice_box_tool', self::tool_for( $cats ), $post );
 		$tool = '' !== $slug ? self::page_url( $slug ) : '';
 		if ( '' === $tool ) {
-			return $content;
+			return array() !== $level ? $content . self::render_level_only( $level ) : $content;
 		}
 
-		return $content . self::render( $slug, $tool, self::page_url( self::LEVEL_TEST_PAGE ) );
+		return $content . self::render( $slug, $tool, self::page_url( self::LEVEL_TEST_PAGE ), $level );
+	}
+
+	/**
+	 * The CEFR level of a post from its categories ('' = none). The lowest
+	 * level wins when a post sits in more than one level category.
+	 *
+	 * @param list<string> $cats
+	 */
+	public static function level_for( array $cats ): string {
+		foreach ( self::LEVEL_CATEGORIES as $slug => $level ) {
+			if ( in_array( $slug, $cats, true ) ) {
+				return $level;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Links for a level: its Learn hub and its course. Empty when the level
+	 * is '' or the hub page does not exist (never link to a 404).
+	 *
+	 * @return array{level:string,name:string,hub:string,course:string}|array{}
+	 */
+	private static function level_links( string $level ): array {
+		if ( '' === $level ) {
+			return array();
+		}
+		$hub = self::page_url( self::LEARN_PAGE . '/' . strtolower( $level ) );
+		if ( '' === $hub ) {
+			return array();
+		}
+
+		return array(
+			'level'  => $level,
+			'name'   => $level . ' ' . self::LEVEL_NAMES[ $level ],
+			'hub'    => $hub,
+			'course' => self::course_url( $level ),
+		);
+	}
+
+	/** The published Tutor LMS course whose title carries this level code, or ''. */
+	private static function course_url( string $level ): string {
+		if ( ! post_type_exists( 'courses' ) ) {
+			return '';
+		}
+		$courses = get_posts(
+			array(
+				'post_type'      => 'courses',
+				'post_status'    => 'publish',
+				'posts_per_page' => 20,
+				'no_found_rows'  => true,
+			)
+		);
+		foreach ( $courses as $course ) {
+			if ( 1 === preg_match( '/\\b' . preg_quote( $level, '/' ) . '\\b/', (string) $course->post_title ) ) {
+				return (string) get_permalink( $course );
+			}
+		}
+
+		return '';
 	}
 
 	/**
@@ -143,8 +237,67 @@ final class PracticeBox {
 		);
 	}
 
-	private static function render( string $slug, string $tool_url, string $level_url ): string {
+	/**
+	 * @param array{level:string,name:string,hub:string,course:string}|array{} $level
+	 */
+	private static function render( string $slug, string $tool_url, string $level_url, array $level = array() ): string {
 		$c   = self::copy( $slug );
+		$out = self::style();
+
+		$out .= '<aside class="efs-practice-box" aria-label="' . esc_attr__( 'Practice what you just read', 'english-finders-study' ) . '">';
+		$out .= '<p class="efs-practice-box__eyebrow">' . esc_html__( 'Practice what you just read', 'english-finders-study' ) . '</p>';
+		$out .= '<p class="efs-practice-box__title">' . esc_html( $c['title'] ) . '</p>';
+		if ( '' !== $c['blurb'] ) {
+			$out .= '<p class="efs-practice-box__blurb">' . esc_html( $c['blurb'] ) . '</p>';
+		}
+		$out .= '<a class="efs-practice-box__btn" href="' . esc_url( $tool_url ) . '">' . esc_html( $c['button'] ) . ' &rarr;</a>';
+		$out .= self::level_row( $level );
+		if ( '' !== $level_url && array() === $level ) {
+			$out .= '<p class="efs-practice-box__level">' . esc_html__( 'Not sure of your level?', 'english-finders-study' ) . ' <a href="' . esc_url( $level_url ) . '">' . esc_html__( 'Take the free level test (about 10 minutes)', 'english-finders-study' ) . ' &rarr;</a></p>';
+		}
+		$out .= '</aside>';
+
+		return $out;
+	}
+
+	/**
+	 * A compact box with only the level links, for posts whose practice box
+	 * is skipped (they already link a tool, or no tool fits).
+	 *
+	 * @param array{level:string,name:string,hub:string,course:string} $level
+	 */
+	private static function render_level_only( array $level ): string {
+		return self::style()
+			. '<aside class="efs-practice-box efs-practice-box--level" aria-label="' . esc_attr__( 'Continue at your level', 'english-finders-study' ) . '">'
+			. self::level_row( $level, true )
+			. '</aside>';
+	}
+
+	/**
+	 * "Continue at B1 Intermediate: B1 hub · B1 course" ('' when no level).
+	 *
+	 * @param array{level:string,name:string,hub:string,course:string}|array{} $level
+	 */
+	private static function level_row( array $level, bool $standalone = false ): string {
+		if ( array() === $level ) {
+			return '';
+		}
+		$links = '<a href="' . esc_url( $level['hub'] ) . '">'
+			/* translators: %s: CEFR level code, e.g. B1 */
+			. esc_html( sprintf( __( '%s lessons, words & practice', 'english-finders-study' ), $level['level'] ) ) . ' &rarr;</a>';
+		if ( '' !== $level['course'] ) {
+			$links .= ' <span aria-hidden="true">&middot;</span> <a href="' . esc_url( $level['course'] ) . '">'
+				/* translators: %s: CEFR level code, e.g. B1 */
+				. esc_html( sprintf( __( 'Free %s course', 'english-finders-study' ), $level['level'] ) ) . ' &rarr;</a>';
+		}
+
+		return '<p class="efs-practice-box__level' . ( $standalone ? ' efs-practice-box__level--standalone' : '' ) . '">'
+			/* translators: %s: CEFR level and name, e.g. B1 Intermediate */
+			. '<strong>' . esc_html( sprintf( __( 'Written for %s learners.', 'english-finders-study' ), $level['name'] ) ) . '</strong> '
+			. $links . '</p>';
+	}
+
+	private static function style(): string {
 		$out = '';
 		if ( ! self::$style_printed ) {
 			self::$style_printed = true;
@@ -160,20 +313,9 @@ final class PracticeBox {
 				. '.efs-practice-box .efs-practice-box__level{margin:14px 0 0;font-size:14px;line-height:1.5;color:#4d5c72}'
 				. '.efs-practice-box .efs-practice-box__level a{color:#075aae;font-weight:500;text-decoration:underline;text-underline-offset:3px}'
 				. '.efs-practice-box a:focus-visible{outline:2px solid #075aae;outline-offset:2px}'
+				. '.efs-practice-box .efs-practice-box__level--standalone{margin:0}'
 				. '</style>';
 		}
-
-		$out .= '<aside class="efs-practice-box" aria-label="' . esc_attr__( 'Practice what you just read', 'english-finders-study' ) . '">';
-		$out .= '<p class="efs-practice-box__eyebrow">' . esc_html__( 'Practice what you just read', 'english-finders-study' ) . '</p>';
-		$out .= '<p class="efs-practice-box__title">' . esc_html( $c['title'] ) . '</p>';
-		if ( '' !== $c['blurb'] ) {
-			$out .= '<p class="efs-practice-box__blurb">' . esc_html( $c['blurb'] ) . '</p>';
-		}
-		$out .= '<a class="efs-practice-box__btn" href="' . esc_url( $tool_url ) . '">' . esc_html( $c['button'] ) . ' &rarr;</a>';
-		if ( '' !== $level_url ) {
-			$out .= '<p class="efs-practice-box__level">' . esc_html__( 'Not sure of your level?', 'english-finders-study' ) . ' <a href="' . esc_url( $level_url ) . '">' . esc_html__( 'Take the free level test (about 10 minutes)', 'english-finders-study' ) . ' &rarr;</a></p>';
-		}
-		$out .= '</aside>';
 
 		return $out;
 	}

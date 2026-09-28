@@ -3,7 +3,7 @@ Contributors: englishfinders
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.16.0
+Stable tag: 1.17.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,12 @@ Tools are organised by skill. "For teachers" and "Uses AI" are filters that cut 
 English Finders Core 1.4.0 or later must be installed and active. Study reads the shared dictionary, CEFR levels and provider connections from Core rather than holding its own copies.
 
 == Changelog ==
+
+= 1.17.0 =
+* Blog posts in a CEFR level category (A1 ... C2) now lead into that level. The "Practice what you just read" box gains a "Written for B1 Intermediate learners" row linking the level's Learn hub (/learn/b1/) and its free course. Levelled posts that get no practice box (because they already link a practice tool, or no tool fits) show a compact level-only box instead. Posts without a level category are unchanged and keep the level-test link.
+* If a post is in more than one level category, the lowest level is used. The hub link is only shown when the /learn/<level>/ page exists, and the course link only when a published course carries that level code in its title.
+* New filter efs_level_links_enabled (bool, WP_Post). New public PracticeBox::level_for( $category_slugs ) and the LEVEL_CATEGORIES / LEVEL_NAMES constants.
+* tests/test_practice_box.php (24 assertions): level mapping, unchanged tool rules, and both box variants render well-formed HTML.
 
 = 1.16.0 =
 * 468 new practice questions. Per level (A1-C2): Grammar Quiz 42 -> 60, Reading Quiz 24 -> 36 passages, Error Correction 12 -> 36, Sentence Builder 12 -> 36. That is 1,008 practice questions in total (was 540). The Level Test also draws on the grammar and reading banks, so it gets the new items too.
