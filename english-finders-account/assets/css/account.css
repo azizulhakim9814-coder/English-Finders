@@ -1,0 +1,2355 @@
+/*
+ * My Account page styling.
+ *
+ * Tokens captured from the site's own live rendering (homepage, /games/,
+ * a CEFR word-list page) on 2026-09-23, not invented -- Lexend throughout,
+ * #075AAE as the one accent (matches every existing button and link),
+ * #0E2A4A for headings, white 16px-radius cards with a barely-there shadow
+ * matching the real game/tool card grids, 5px-radius buttons matching the
+ * homepage CTA. See the Novamira design "English Finders Captured Brand".
+ *
+ * Low variance/motion by design: this is a returning-user dashboard, not a
+ * marketing page -- a calm, symmetric grid with no animation is correct here.
+ *
+ * 0.6.0 visual pass: a profile header, a left-nav dashboard layout, icons on
+ * every stat/list item, and badge progress bars -- closing the gap this page
+ * had against Duolingo's and 7ESL's account dashboards (icon+stat grids,
+ * achievement progress bars, persistent section nav). Same tokens, same low
+ * variance/motion dials -- this is more structure on the existing design,
+ * not a different one.
+ */
+
+.efa-auth-page,
+.efa-account-shell {
+	--efa-bg: #f5f5f5;
+	--efa-surface: #ffffff;
+	--efa-ink: #0e2a4a;
+	--efa-muted: #6b7280;
+	--efa-border: #e5e7eb;
+	--efa-accent: #075aae;
+	--efa-accent-hover: #06498c;
+	--efa-success: #16a34a;
+	--efa-success-bg: #f0fdf4;
+	--efa-error: #dc2626;
+	--efa-error-bg: #fef2f2;
+	--efa-radius-sm: 5px;
+	--efa-radius-md: 16px;
+	--efa-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+	--efa-space-sm: 8px;
+	--efa-space-md: 16px;
+	--efa-space-lg: 32px;
+
+	max-width: 960px;
+	margin: 0 auto;
+	padding: var(--efa-space-lg) var(--efa-space-md) 64px;
+	font-family: Lexend, sans-serif;
+	color: #1a1a1a;
+}
+
+.efa-account-shell {
+	max-width: 1080px;
+}
+
+.efa-auth-page h1,
+.efa-account-shell h1 {
+	font-family: Lexend, sans-serif;
+	font-weight: 500;
+	font-size: 32px;
+	line-height: 1.15;
+	color: var(--efa-ink);
+	margin: 0 0 var(--efa-space-lg);
+}
+
+.efa-account-section h2,
+.efa-auth-card h2 {
+	font-family: Lexend, sans-serif;
+	font-weight: 500;
+	font-size: 20px;
+	line-height: 1.2;
+	color: var(--efa-ink);
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-account-section h3 {
+	font-family: Lexend, sans-serif;
+	font-weight: 500;
+	font-size: 16px;
+	line-height: 1.2;
+	color: var(--efa-ink);
+	margin: var(--efa-space-lg) 0 var(--efa-space-sm);
+}
+
+.efa-account-section .description,
+.efa-auth-card .description {
+	color: var(--efa-muted);
+	font-size: 14px;
+	line-height: 1.6;
+	max-width: 60ch;
+}
+
+/* ---------- Notices ---------- */
+
+.efa-notice {
+	border-radius: var(--efa-radius-sm);
+	padding: var(--efa-space-sm) var(--efa-space-md);
+	margin: 0 0 var(--efa-space-md);
+	font-size: 14px;
+}
+
+.efa-notice p {
+	margin: 0;
+}
+
+.efa-notice-success {
+	background: var(--efa-success-bg);
+	color: var(--efa-success);
+	border: 1px solid rgba(22, 163, 74, 0.25);
+}
+
+.efa-notice-error {
+	background: var(--efa-error-bg);
+	color: var(--efa-error);
+	border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+/* 0.12.0: "log in to continue to your lesson" on the login page. */
+.efa-notice-info {
+	background: #f0f6fc;
+	color: var(--efa-ink);
+	border: 1px solid rgba(7, 90, 174, 0.2);
+}
+
+/* ---------- Cards: sections, auth cards ---------- */
+
+.efa-account-section,
+.efa-auth-card {
+	background: var(--efa-surface);
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-md);
+	box-shadow: var(--efa-shadow);
+	padding: var(--efa-space-lg);
+	margin: 0 0 var(--efa-space-md);
+}
+
+/* ---------- Icons (0.6.0) ---------- */
+
+.efa-icon {
+	width: 1em;
+	height: 1em;
+	flex: none;
+}
+
+/* ---------- Profile header (0.6.0) ---------- */
+
+.efa-account-header {
+	display: flex;
+	align-items: center;
+	gap: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-lg);
+}
+
+.efa-account-avatar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	background: var(--efa-accent);
+	color: #fff;
+	font-family: Lexend, sans-serif;
+	font-weight: 500;
+	font-size: 22px;
+	letter-spacing: 0.02em;
+}
+
+.efa-account-header h1 {
+	margin: 0;
+}
+
+.efa-account-header__meta {
+	display: flex;
+	align-items: center;
+	gap: var(--efa-space-sm);
+	margin: 4px 0 0;
+	font-size: 14px;
+	color: var(--efa-muted);
+}
+
+.efa-plan-badge {
+	display: inline-block;
+	background: var(--efa-bg);
+	border: 1px solid var(--efa-border);
+	border-radius: 999px;
+	padding: 2px 10px;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+/* ---------- Dashboard layout: left nav + main column (0.6.0) ---------- */
+
+.efa-account-layout {
+	display: grid;
+	grid-template-columns: 200px 1fr;
+	gap: var(--efa-space-lg);
+	align-items: start;
+}
+
+.efa-account-nav {
+	position: sticky;
+	top: var(--efa-space-lg);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.efa-account-nav a {
+	padding: 8px 12px;
+	border-radius: var(--efa-radius-sm);
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--efa-muted);
+	text-decoration: none;
+}
+
+.efa-account-nav a:hover,
+.efa-account-nav a:focus-visible {
+	background: var(--efa-surface);
+	color: var(--efa-accent);
+}
+
+.efa-account-main {
+	min-width: 0;
+}
+
+@media (max-width: 780px) {
+	.efa-account-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.efa-account-nav {
+		position: static;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: var(--efa-space-sm);
+		margin: 0 0 var(--efa-space-md);
+	}
+
+	.efa-account-nav a {
+		background: var(--efa-surface);
+		border: 1px solid var(--efa-border);
+		padding: 6px 12px;
+	}
+}
+
+/* ---------- Login / register layout ---------- */
+
+.efa-auth-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--efa-space-md);
+	align-items: start;
+}
+
+@media (max-width: 640px) {
+	.efa-auth-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ---------- Forms ---------- */
+
+.efa-account-section form p,
+.efa-auth-card form p {
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-account-section label,
+.efa-auth-card label {
+	display: block;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--efa-ink);
+	margin-bottom: 6px;
+}
+
+.efa-account-section label:has(input[type="checkbox"]),
+.efa-auth-card label:has(input[type="checkbox"]) {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 400;
+}
+
+.efa-account-section input[type="text"],
+.efa-account-section input[type="email"],
+.efa-account-section input[type="password"],
+.efa-account-section input[type="number"],
+.efa-auth-card input[type="text"],
+.efa-auth-card input[type="email"],
+.efa-auth-card input[type="password"] {
+	width: 100%;
+	max-width: 360px;
+	box-sizing: border-box;
+	font-family: Lexend, sans-serif;
+	font-size: 14px;
+	padding: 10px 12px;
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	background: #fff;
+	color: #1a1a1a;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.efa-account-section input:focus,
+.efa-auth-card input:focus {
+	outline: none;
+	border-color: var(--efa-accent);
+	box-shadow: 0 0 0 3px rgba(7, 90, 174, 0.15);
+}
+
+.efa-account-section input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+	accent-color: var(--efa-accent);
+}
+
+/* ---------- Buttons ---------- */
+
+.efa-account-section button[type="submit"],
+.efa-auth-card button[type="submit"],
+.efa-account-section button[type="button"] {
+	font-family: Lexend, sans-serif;
+	font-size: 14px;
+	font-weight: 400;
+	color: #fff;
+	background: var(--efa-accent);
+	border: none;
+	border-radius: var(--efa-radius-sm);
+	padding: 10px 20px;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.efa-account-section button[type="submit"]:hover,
+.efa-auth-card button[type="submit"]:hover,
+.efa-account-section button[type="button"]:hover {
+	background: var(--efa-accent-hover);
+}
+
+.efa-account-section button[type="submit"]:focus-visible,
+.efa-auth-card button[type="submit"]:focus-visible,
+.efa-account-section button[type="button"]:focus-visible {
+	outline: 2px solid var(--efa-accent);
+	outline-offset: 2px;
+}
+
+.efa-account-section a,
+.efa-auth-card a {
+	color: var(--efa-accent);
+}
+
+/* ---------- Progress section: stat tiles ---------- */
+
+.efa-progress-stats {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-md);
+}
+
+@media (max-width: 640px) {
+	.efa-progress-stats {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.efa-progress-stat {
+	background: var(--efa-bg);
+	border-radius: var(--efa-radius-sm);
+	padding: var(--efa-space-md);
+	text-align: center;
+}
+
+.efa-progress-stat__icon {
+	width: 22px;
+	height: 22px;
+	color: var(--efa-accent);
+}
+
+.efa-progress-stat__value {
+	display: block;
+	font-family: Lexend, sans-serif;
+	font-weight: 500;
+	font-size: 28px;
+	line-height: 1.1;
+	color: var(--efa-accent);
+	margin-top: 6px;
+}
+
+.efa-progress-stat__label {
+	display: block;
+	font-size: 12px;
+	color: var(--efa-muted);
+	margin-top: 4px;
+}
+
+.efa-badge-list {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--efa-space-sm);
+	margin: 0;
+	padding: 0;
+}
+
+.efa-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: var(--efa-bg);
+	border: 1px solid var(--efa-border);
+	border-radius: 999px;
+	padding: 6px 14px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--efa-ink);
+	cursor: default;
+}
+
+.efa-badge__icon {
+	width: 14px;
+	height: 14px;
+	color: var(--efa-accent);
+}
+
+/* ---------- "Next up" badge progress (0.6.0) ---------- */
+
+.efa-next-badge-list {
+	list-style: none;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: var(--efa-space-sm);
+	margin: 0;
+	padding: 0;
+}
+
+@media (max-width: 640px) {
+	.efa-next-badge-list {
+		grid-template-columns: 1fr;
+	}
+}
+
+.efa-next-badge {
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	padding: var(--efa-space-sm) var(--efa-space-md);
+}
+
+.efa-next-badge__head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.efa-next-badge__icon {
+	width: 14px;
+	height: 14px;
+	color: var(--efa-muted);
+}
+
+.efa-next-badge__label {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-next-badge__count {
+	margin-left: auto;
+	font-size: 12px;
+	color: var(--efa-muted);
+}
+
+.efa-next-badge__bar {
+	height: 6px;
+	border-radius: 999px;
+	background: var(--efa-bg);
+	overflow: hidden;
+}
+
+.efa-next-badge__bar-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: var(--efa-accent);
+}
+
+/* ---------- Library section ---------- */
+
+.efa-library-list {
+	list-style: none;
+	margin: 0 0 var(--efa-space-md);
+	padding: 0;
+	border-top: 1px solid var(--efa-border);
+}
+
+.efa-library-list li {
+	display: flex;
+	align-items: center;
+	gap: var(--efa-space-sm);
+	padding: 10px 0;
+	border-bottom: 1px solid var(--efa-border);
+	font-size: 14px;
+}
+
+.efa-library-item__icon {
+	width: 16px;
+	height: 16px;
+	color: var(--efa-accent);
+	flex: none;
+}
+
+.efa-library-item {
+	color: #1a1a1a;
+	flex: 1;
+}
+
+.efa-library-date {
+	color: var(--efa-muted);
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+/* ---------- Empty states (0.6.0) ---------- */
+
+.efa-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--efa-space-sm);
+	background: var(--efa-bg);
+	border-radius: var(--efa-radius-sm);
+	padding: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-empty-state__icon {
+	width: 24px;
+	height: 24px;
+	color: var(--efa-muted);
+}
+
+.efa-empty-state .description {
+	margin: 0;
+}
+
+/*
+ * Scoped as ".efa-account-section .efa-empty-state__cta", not the bare
+ * class -- ".efa-account-section a" above is a class+element selector
+ * (specificity 0,0,1,1), which beats a single class alone (0,0,1,0) and
+ * would otherwise repaint this button's text the same blue as its
+ * background. A real bug caught by an actual browser render during this
+ * change, not by inspecting the CSS source alone.
+ */
+.efa-account-section .efa-empty-state__cta {
+	display: inline-block;
+	background: var(--efa-accent);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 500;
+	text-decoration: none;
+	border-radius: var(--efa-radius-sm);
+	padding: 8px 16px;
+}
+
+.efa-account-section .efa-empty-state__cta:hover {
+	background: var(--efa-accent-hover);
+	color: #fff;
+}
+
+/* ---------- Membership section ---------- */
+
+.efa-plan-upgrade-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--efa-space-sm);
+	margin: var(--efa-space-sm) 0;
+}
+
+.efa-transaction-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: var(--efa-space-sm);
+	font-size: 14px;
+}
+
+.efa-transaction-table th {
+	text-align: left;
+	font-weight: 500;
+	color: var(--efa-muted);
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--efa-border);
+}
+
+.efa-transaction-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--efa-border);
+	color: #1a1a1a;
+}
+
+.efa-transaction-table tr:last-child td {
+	border-bottom: none;
+}
+
+/* ---------- Log out link ---------- */
+
+.efa-account-main > p > a {
+	color: var(--efa-muted);
+	font-size: 14px;
+	text-decoration: underline;
+}
+
+.efa-account-main > p > a:hover {
+	color: var(--efa-accent);
+}
+
+/*
+ * My Level section (0.7.0, Phase A4).
+ *
+ * Same tokens as everything above -- no new colours. The level badge is the
+ * one deliberately loud element on the page: "where am I" is the first
+ * question this dashboard answers (my-account-design.md), so it gets the
+ * accent fill the stat tiles don't. Skill scales reuse the six-step A1-C2
+ * idea from the level test's own result screen, so the two read as one
+ * system. The history table reuses .efa-transaction-table's styling.
+ */
+.efa-level-hero {
+	display: flex;
+	align-items: center;
+	gap: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-level-badge {
+	flex: 0 0 auto;
+	display: grid;
+	place-items: center;
+	min-width: 76px;
+	height: 76px;
+	padding: 0 10px;
+	border-radius: var(--efa-radius-md);
+	background: var(--efa-accent);
+	color: #fff;
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.efa-level-hero__text p {
+	margin: 0 0 4px;
+}
+
+.efa-level-hero .efa-level-hero__label {
+	font-size: 20px;
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-level-hero .efa-level-hero__desc {
+	color: #1a1a1a;
+	line-height: 1.5;
+}
+
+.efa-level-hero .efa-level-hero__meta {
+	font-size: 14px;
+	color: var(--efa-muted);
+}
+
+.efa-skill-list {
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/*
+ * Skill rows: name | six-segment scale | level. The key row underneath uses
+ * the scale's own 3px gap, so its outer columns absorb the difference from
+ * the row gap (12px) -- that keeps each A1..C2 label centred under its segment.
+ */
+.efa-skill {
+	display: grid;
+	grid-template-columns: 110px 1fr 56px;
+	align-items: center;
+	gap: 12px;
+}
+
+.efa-skill__name {
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+/*
+ * minmax(0, 1fr), not 1fr, on both the scale and its key: a plain 1fr
+ * column won't shrink below its text, so on a narrow phone the key's
+ * "A1".."C2" labels made its columns wider than the empty segments above
+ * and drifted out of line (measured in a real browser render).
+ */
+.efa-skill__scale {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 3px;
+}
+
+.efa-skill__seg {
+	height: 10px;
+	border-radius: 3px;
+	background: var(--efa-border);
+}
+
+.efa-skill__seg.is-filled {
+	background: var(--efa-accent);
+}
+
+.efa-skill__level {
+	font-weight: 600;
+	color: var(--efa-accent);
+	text-align: right;
+}
+
+.efa-account-section .efa-skill-scale-key {
+	display: grid;
+	grid-template-columns: 119px repeat(6, minmax(0, 1fr)) 65px;
+	column-gap: 3px;
+	margin: 4px 0 var(--efa-space-md);
+	font-size: 12px;
+	color: var(--efa-muted);
+}
+
+/* Empty grid items filling the name and level columns. */
+.efa-skill-scale-key::before,
+.efa-skill-scale-key::after {
+	content: "";
+}
+
+.efa-skill-scale-key span {
+	text-align: center;
+}
+
+.efa-account-section .efa-level-retake {
+	font-weight: 500;
+}
+
+.efa-course-list {
+	display: grid;
+	gap: 10px;
+	margin: 0 0 var(--efa-space-md);
+	padding: 0;
+	list-style: none;
+}
+
+.efa-course {
+	display: grid;
+	grid-template-columns: 44px minmax(0, 1fr) 120px 80px;
+	align-items: center;
+	gap: 12px;
+}
+
+.efa-course__level {
+	display: grid;
+	place-items: center;
+	height: 32px;
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-bg);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--efa-ink);
+}
+
+.efa-course__main {
+	min-width: 0;
+}
+
+/* 0.12.0: wraps rather than truncating -- rows are two lines now anyway, and a cut-off "English Finders A..." hid which course it was at mid widths. */
+.efa-course__title {
+	display: block;
+	overflow-wrap: anywhere;
+}
+
+/* 0.12.0: "12 of 97 done · Next: <lesson>" / "Completed. View certificate". */
+.efa-account-section .efa-course__sub {
+	display: block;
+	margin-top: 2px;
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--efa-muted);
+}
+
+.efa-course.is-complete .efa-course__level {
+	background: var(--efa-accent);
+	color: #fff;
+}
+
+.efa-course__bar {
+	height: 6px;
+	border-radius: 999px;
+	background: var(--efa-bg);
+	overflow: hidden;
+}
+
+.efa-course__bar-fill {
+	display: block;
+	height: 100%;
+	border-radius: 999px;
+	background: var(--efa-accent);
+}
+
+.efa-course__pct,
+.efa-course__status {
+	font-size: 14px;
+	color: var(--efa-muted);
+	text-align: right;
+}
+
+/* An unenrolled course has no bar: its status spans both trailing columns. */
+.efa-course__status {
+	grid-column: 3 / 5;
+}
+
+/*
+ * A five-column history table can't fit a phone; it scrolls inside its own
+ * box instead of widening the whole page (it pushed a 375px viewport to
+ * 532px in a real browser render before this wrapper existed).
+ */
+.efa-table-scroll {
+	max-width: 100%;
+	overflow-x: auto;
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-table-scroll .efa-transaction-table {
+	margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+	/* Badge above the text on a phone; side by side left the description one word per line. */
+	.efa-level-hero {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--efa-space-sm);
+	}
+
+	.efa-skill {
+		grid-template-columns: 96px 1fr 44px;
+		gap: 8px;
+	}
+
+	.efa-account-section .efa-skill-scale-key {
+		grid-template-columns: 101px repeat(6, minmax(0, 1fr)) 49px;
+	}
+
+	.efa-course {
+		grid-template-columns: 44px minmax(0, 1fr) 72px;
+	}
+
+	/* The level chip already says which course it is; let the full title wrap rather than cut it off. */
+	.efa-course__title {
+		white-space: normal;
+	}
+
+	.efa-course__bar {
+		display: none;
+	}
+
+	.efa-course__status {
+		grid-column: 3;
+	}
+}
+
+/*
+ * Mistake notebook (0.8.0).
+ *
+ * Same tokens as everything above, no new colours: the learner's answer
+ * uses the existing error tint, the right answer the existing success tint
+ * -- the one place on the page where red/green carries meaning. "Got it"
+ * keeps the standard primary button; "Practise in ..." is a plain text link
+ * so the two actions don't compete. Filter chips reuse the mobile nav-pill
+ * look.
+ */
+.efa-account-section .efa-mistakes-summary {
+	margin: 0 0 var(--efa-space-md);
+	color: var(--efa-muted);
+}
+
+.efa-mistakes-filter {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--efa-space-sm);
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-account-section .efa-mistakes-filter a {
+	padding: 6px 12px;
+	border: 1px solid var(--efa-border);
+	border-radius: 999px;
+	background: var(--efa-surface);
+	font-size: 14px;
+	color: var(--efa-ink);
+	text-decoration: none;
+}
+
+.efa-account-section .efa-mistakes-filter a span {
+	color: var(--efa-muted);
+}
+
+.efa-account-section .efa-mistakes-filter a[aria-current="true"] {
+	border-color: var(--efa-accent);
+	background: var(--efa-accent);
+	color: #fff;
+}
+
+.efa-account-section .efa-mistakes-filter a[aria-current="true"] span {
+	color: #fff;
+}
+
+.efa-mistake-list {
+	display: grid;
+	gap: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-md);
+	padding: 0;
+	list-style: none;
+}
+
+.efa-mistake {
+	padding: var(--efa-space-md);
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+}
+
+.efa-mistake__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 var(--efa-space-sm);
+}
+
+.efa-mistake__tag {
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: var(--efa-bg);
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-mistake__source {
+	font-size: 13px;
+	color: var(--efa-muted);
+}
+
+.efa-account-section .efa-mistake__prompt {
+	margin: 0 0 var(--efa-space-sm);
+	font-size: 17px;
+	font-weight: 500;
+	color: var(--efa-ink);
+	overflow-wrap: anywhere;
+}
+
+.efa-mistake__context {
+	margin: 0 0 var(--efa-space-sm);
+	font-size: 14px;
+}
+
+.efa-mistake__context summary {
+	cursor: pointer;
+	color: var(--efa-accent);
+}
+
+.efa-mistake__context p {
+	margin: 6px 0 0;
+	padding: 10px 12px;
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-bg);
+	line-height: 1.55;
+}
+
+.efa-mistake__answers {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--efa-space-sm);
+	margin: 0 0 var(--efa-space-sm);
+}
+
+.efa-mistake__answer {
+	padding: 8px 12px;
+	border-radius: var(--efa-radius-sm);
+	min-width: 0;
+}
+
+.efa-mistake__answer dt {
+	margin: 0 0 2px;
+	font-size: 12px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.efa-mistake__answer dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.efa-mistake__answer--given {
+	background: var(--efa-error-bg);
+}
+
+.efa-mistake__answer--given dt {
+	color: var(--efa-error);
+}
+
+.efa-mistake__answer--correct {
+	background: var(--efa-success-bg);
+}
+
+.efa-mistake__answer--correct dt {
+	color: var(--efa-success);
+}
+
+.efa-account-section .efa-mistake__explanation {
+	margin: 0 0 var(--efa-space-sm);
+	font-size: 14px;
+	color: var(--efa-muted);
+	line-height: 1.5;
+}
+
+.efa-mistake__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--efa-space-md);
+}
+
+.efa-mistake__actions form {
+	margin: 0;
+}
+
+.efa-account-section .efa-mistake__practice {
+	font-size: 14px;
+	font-weight: 500;
+}
+
+@media (max-width: 640px) {
+	.efa-mistake__answers {
+		grid-template-columns: 1fr;
+	}
+}
+
+/*
+ * Phones: every section card used the desktop 32px padding, leaving about
+ * 210px for text at 375px wide (seen while checking the mistake notebook in
+ * a real browser). Halve it on small screens; desktop is unchanged.
+ */
+@media (max-width: 640px) {
+	.efa-account-section {
+		padding: var(--efa-space-md);
+	}
+}
+
+/*
+ * Daily goal + streak calendar (0.9.0).
+ *
+ * Same tokens, no new colours. The ring and "goal reached" days use the
+ * accent; merely-active days a light accent tint; empty days the page
+ * background. Success green is reserved for the ring's "reached" state,
+ * so a day's colour always means the same thing as its legend.
+ */
+.efa-account-section select {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 360px;
+	font-family: Lexend, sans-serif;
+	font-size: 14px;
+	padding: 10px 12px;
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	background: #fff;
+	color: #1a1a1a;
+}
+
+.efa-account-section select:focus {
+	outline: none;
+	border-color: var(--efa-accent);
+	box-shadow: 0 0 0 3px rgba(7, 90, 174, 0.15);
+}
+
+.efa-field-hint {
+	display: block;
+	margin-top: 6px;
+	font-size: 13px;
+	color: var(--efa-muted);
+}
+
+.efa-goal {
+	display: flex;
+	align-items: center;
+	gap: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-lg);
+	padding: var(--efa-space-md);
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+}
+
+.efa-goal__ring {
+	flex: none;
+	width: 88px;
+	height: 88px;
+}
+
+.efa-goal__track {
+	fill: none;
+	stroke: var(--efa-bg);
+	stroke-width: 10;
+}
+
+.efa-goal__fill {
+	fill: none;
+	stroke: var(--efa-accent);
+	stroke-width: 10;
+	stroke-linecap: round;
+}
+
+.efa-goal.is-met .efa-goal__fill {
+	stroke: var(--efa-success);
+}
+
+.efa-goal__pct {
+	font-family: Lexend, sans-serif;
+	font-size: 20px;
+	font-weight: 600;
+	fill: var(--efa-ink);
+}
+
+.efa-goal__text p {
+	margin: 0 0 4px;
+}
+
+.efa-account-section .efa-goal__title {
+	font-size: 17px;
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-goal.is-met .efa-goal__title {
+	color: var(--efa-success);
+}
+
+.efa-account-section .efa-goal__numbers {
+	color: #1a1a1a;
+}
+
+.efa-account-section .efa-goal__week {
+	font-size: 14px;
+	color: var(--efa-muted);
+}
+
+.efa-account-section .efa-calendar-summary {
+	margin: 0 0 var(--efa-space-sm);
+	font-size: 14px;
+	color: var(--efa-muted);
+}
+
+.efa-calendar {
+	display: grid;
+	gap: 4px;
+	max-width: 420px;
+}
+
+.efa-calendar__head,
+.efa-calendar__week {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 4px;
+}
+
+.efa-calendar__head span {
+	font-size: 12px;
+	color: var(--efa-muted);
+	text-align: center;
+}
+
+.efa-calendar__day {
+	display: grid;
+	place-items: center;
+	aspect-ratio: 1;
+	border-radius: var(--efa-radius-sm);
+	font-size: 12px;
+	color: var(--efa-muted);
+	background: var(--efa-bg);
+}
+
+.efa-calendar__day.is-active {
+	background: rgba(7, 90, 174, 0.18);
+	color: var(--efa-ink);
+}
+
+.efa-calendar__day.is-goal {
+	background: var(--efa-accent);
+	color: #fff;
+	font-weight: 600;
+}
+
+.efa-calendar__day.is-future {
+	background: transparent;
+	color: var(--efa-border);
+}
+
+.efa-calendar__day.is-today {
+	box-shadow: inset 0 0 0 2px var(--efa-ink);
+}
+
+.efa-account-section .efa-calendar__legend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 12px;
+	margin: var(--efa-space-sm) 0 0;
+	font-size: 13px;
+	color: var(--efa-muted);
+}
+
+.efa-calendar__key {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin-right: -6px;
+	border-radius: 3px;
+	vertical-align: middle;
+}
+
+.efa-calendar__key.is-none {
+	background: var(--efa-bg);
+	box-shadow: inset 0 0 0 1px var(--efa-border);
+}
+
+.efa-calendar__key.is-active {
+	background: rgba(7, 90, 174, 0.18);
+}
+
+.efa-calendar__key.is-goal {
+	background: var(--efa-accent);
+}
+
+@media (max-width: 640px) {
+	.efa-goal__ring {
+		width: 72px;
+		height: 72px;
+	}
+}
+
+/*
+ * Weekly leaderboard (0.10.0).
+ *
+ * Same tokens, no new colours. The viewer's row gets the accent tint used
+ * for "active" calendar days, so "this is you" reads the same way across
+ * sections; the top three ranks get the accent for their number only --
+ * restrained, not a medal-colour scheme.
+ */
+.efa-account-section .efa-leaderboard-week {
+	margin: -8px 0 var(--efa-space-md);
+	font-size: 14px;
+	color: var(--efa-muted);
+}
+
+.efa-leaderboard-join {
+	margin: 0 0 var(--efa-space-md);
+	padding: var(--efa-space-md);
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-bg);
+}
+
+.efa-leaderboard-join p {
+	margin: 0 0 var(--efa-space-sm);
+	line-height: 1.55;
+}
+
+.efa-account-section .efa-leaderboard-join__title {
+	font-size: 17px;
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-leaderboard-join form {
+	margin: 0;
+}
+
+.efa-account-section .efa-leaderboard-you {
+	margin: 0 0 var(--efa-space-md);
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-leaderboard {
+	display: grid;
+	gap: 6px;
+	margin: 0 0 var(--efa-space-md);
+	padding: 0;
+	list-style: none;
+}
+
+.efa-leaderboard__row {
+	display: grid;
+	grid-template-columns: 32px 36px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 12px;
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+}
+
+.efa-leaderboard__row.is-viewer {
+	border-color: rgba(7, 90, 174, 0.35);
+	background: rgba(7, 90, 174, 0.08);
+}
+
+.efa-leaderboard__rank {
+	font-weight: 600;
+	text-align: center;
+	color: var(--efa-muted);
+}
+
+.efa-leaderboard__row.is-top .efa-leaderboard__rank {
+	color: var(--efa-accent);
+}
+
+.efa-leaderboard__avatar {
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--efa-bg);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--efa-ink);
+}
+
+.efa-leaderboard__row.is-viewer .efa-leaderboard__avatar {
+	background: var(--efa-accent);
+	color: #fff;
+}
+
+.efa-leaderboard__name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--efa-ink);
+}
+
+.efa-leaderboard__you {
+	font-size: 13px;
+	color: var(--efa-muted);
+}
+
+.efa-leaderboard__xp {
+	font-weight: 600;
+	color: var(--efa-ink);
+	white-space: nowrap;
+}
+
+.efa-leaderboard__gap {
+	text-align: center;
+	color: var(--efa-muted);
+	line-height: 1;
+}
+
+.efa-leaderboard-leave {
+	margin: var(--efa-space-sm) 0 0;
+}
+
+/* A text-style button (for low-emphasis actions like "Leave"), overriding the section's primary button look. */
+.efa-account-section button.efa-link-button {
+	padding: 0;
+	border: none;
+	background: none;
+	font-size: 13px;
+	color: var(--efa-muted);
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.efa-account-section button.efa-link-button:hover {
+	background: none;
+	color: var(--efa-error);
+}
+
+@media (max-width: 640px) {
+	.efa-leaderboard__row {
+		grid-template-columns: 24px 32px minmax(0, 1fr) auto;
+		gap: 8px;
+		padding: 8px;
+	}
+
+	.efa-leaderboard__avatar {
+		width: 32px;
+		height: 32px;
+	}
+}
+
+/* ---------- Certificates (0.11.0) ---------- */
+
+.efa-certificates {
+	display: grid;
+	gap: var(--efa-space-sm);
+	margin: 0 0 var(--efa-space-md);
+	padding: 0;
+	list-style: none;
+}
+
+.efa-certificate {
+	display: grid;
+	grid-template-columns: 48px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--efa-space-md);
+	padding: 12px var(--efa-space-md);
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+}
+
+.efa-certificate__level {
+	display: inline-grid;
+	place-items: center;
+	width: 48px;
+	height: 48px;
+	border-radius: 10px;
+	background: var(--efa-accent);
+	color: #fff;
+	font-weight: 600;
+	font-size: 17px;
+}
+
+.efa-certificate__level .efa-icon {
+	width: 24px;
+	height: 24px;
+}
+
+.efa-account-section .efa-certificate__title {
+	margin: 0;
+	font-weight: 500;
+	color: var(--efa-ink);
+	line-height: 1.35;
+}
+
+.efa-account-section .efa-certificate__meta {
+	margin: 2px 0 8px;
+	font-size: 13px;
+	color: var(--efa-muted);
+}
+
+.efa-account-section .efa-certificate__link-label {
+	display: block;
+	margin: 0 0 4px;
+	font-size: 12px;
+	font-weight: 400;
+	color: var(--efa-muted);
+}
+
+.efa-account-section input[type="text"].efa-certificate__link {
+	max-width: 100%;
+	padding: 6px 10px;
+	font-size: 12px;
+	color: var(--efa-muted);
+	background: var(--efa-bg);
+}
+
+/* Same specificity reasoning as .efa-empty-state__cta: beats ".efa-account-section a". */
+.efa-account-section .efa-certificate__view {
+	display: inline-block;
+	background: var(--efa-accent);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+	border-radius: var(--efa-radius-sm);
+	padding: 8px 16px;
+}
+
+.efa-account-section .efa-certificate__view:hover {
+	background: var(--efa-accent-hover);
+	color: #fff;
+}
+
+@media (max-width: 640px) {
+	.efa-certificate {
+		grid-template-columns: 40px minmax(0, 1fr);
+		gap: 12px;
+		padding: 12px;
+	}
+
+	.efa-certificate__level {
+		width: 40px;
+		height: 40px;
+		font-size: 15px;
+	}
+
+	.efa-account-section .efa-certificate__view {
+		grid-column: 1 / -1;
+		text-align: center;
+	}
+}
+
+/*
+ * Home strip (0.12.0): "Continue where you left off" + one suggested next
+ * step, above the sections. Same card look as the sections; the continue
+ * card gets the primary button, the suggestion a quieter one beside it.
+ */
+.efa-home {
+	display: grid;
+	gap: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-md);
+}
+
+/* Side by side only when each card gets at least 280px of the main column; stacked otherwise. */
+.efa-home--two {
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.efa-home-card {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	min-width: 0;
+	background: var(--efa-surface);
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-md);
+	box-shadow: var(--efa-shadow);
+	padding: 24px;
+}
+
+.efa-account-shell .efa-home-card__eyebrow {
+	margin: 0 0 6px;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--efa-accent);
+}
+
+.efa-account-shell .efa-home-card__title {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 12px;
+	font-family: Lexend, sans-serif;
+	font-size: 20px;
+	font-weight: 500;
+	line-height: 1.3;
+	color: var(--efa-ink);
+}
+
+.efa-home-card__level {
+	flex: none;
+	display: inline-grid;
+	place-items: center;
+	min-width: 40px;
+	height: 32px;
+	padding: 0 6px;
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-accent);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.efa-home-card__bar {
+	width: 100%;
+	height: 8px;
+	border-radius: 999px;
+	background: var(--efa-bg);
+	overflow: hidden;
+}
+
+.efa-home-card__bar span {
+	display: block;
+	height: 100%;
+	border-radius: 999px;
+	background: var(--efa-accent);
+}
+
+.efa-account-shell .efa-home-card__meta {
+	margin: 6px 0 12px;
+	font-size: 13px;
+	color: var(--efa-muted);
+}
+
+.efa-account-shell .efa-home-card__next,
+.efa-account-shell .efa-home-card__text {
+	margin: 0 0 16px;
+	font-size: 14px;
+	line-height: 1.55;
+	color: #1a1a1a;
+}
+
+.efa-account-shell .efa-home-card__next strong {
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-account-shell .efa-home-card__cta {
+	display: inline-block;
+	margin-top: auto;
+	padding: 10px 20px;
+	border: 1px solid var(--efa-accent);
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-accent);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1.2;
+	text-decoration: none;
+}
+
+.efa-account-shell .efa-home-card__cta:hover {
+	background: var(--efa-accent-hover);
+	border-color: var(--efa-accent-hover);
+	color: #fff;
+}
+
+.efa-account-shell .efa-home-card__cta--secondary {
+	background: #fff;
+	color: var(--efa-accent);
+}
+
+.efa-account-shell .efa-home-card__cta--secondary:hover {
+	background: #f0f6fc;
+	color: var(--efa-accent);
+}
+
+@media (max-width: 640px) {
+	.efa-home-card {
+		padding: var(--efa-space-md);
+	}
+
+	.efa-account-shell .efa-home-card__title {
+		font-size: 18px;
+	}
+}
+
+/*
+ * 0.12.0: course rows now carry a second line ("12 of 76 done · Next: ..."),
+ * so between the phone breakpoint and ~1000px the fixed bar + % columns
+ * left the title ~100px wide. Use the compact phone layout (no bar, % only)
+ * up to 1000px -- found in a real browser render at 800px.
+ */
+@media (max-width: 1000px) {
+	.efa-course {
+		grid-template-columns: 44px minmax(0, 1fr) 72px;
+	}
+
+	.efa-course__bar {
+		display: none;
+	}
+
+	.efa-course__status {
+		grid-column: 3;
+	}
+}
+
+/*
+ * 0.13.0: sign-up/login page and account settings pass.
+ *
+ * Found on the live page before this change: the two auth cards overflowed
+ * the viewport between ~640 and ~900px (each card's minimum width is
+ * Turnstile's fixed 300px widget + padding, and 1fr 1fr can't shrink below
+ * that), the theme capitalised every h2 ("Create A Free Account"), and a
+ * <br> after each label doubled the label-to-field gap.
+ */
+.efa-auth-grid {
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 370px), 1fr)); /* 370 = Turnstile's fixed 300px + 2 x 32px padding + border */
+}
+
+.efa-auth-page h1,
+.efa-account-shell h1,
+.efa-account-section h2,
+.efa-auth-card h2,
+.efa-account-section h3 {
+	text-transform: none;
+}
+
+.efa-auth-card .efa-auth-lead {
+	margin: -8px 0 var(--efa-space-md);
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--efa-muted);
+}
+
+.efa-auth-card input[type="text"],
+.efa-auth-card input[type="email"],
+.efa-auth-card input[type="password"] {
+	max-width: none;
+}
+
+.efa-auth-card .efa-field-hint,
+.efa-account-section .efa-field-hint {
+	display: block;
+	margin-top: 4px;
+	font-size: 12px;
+	line-height: 1.4;
+	color: var(--efa-muted);
+}
+
+.efa-auth-card .cf-turnstile {
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-auth-card button.efa-auth-submit[type="submit"] {
+	width: 100%;
+	padding: 12px 20px;
+	font-weight: 500;
+}
+
+.efa-auth-card .efa-auth-meta,
+.efa-account-section .efa-auth-meta {
+	margin: var(--efa-space-md) 0 0;
+	font-size: 14px;
+}
+
+.efa-auth-card .efa-auth-terms {
+	margin: 12px 0 0;
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--efa-muted);
+	text-align: center;
+}
+
+/* "Continue with Google": white button with Google's own mark, per Google's sign-in branding guidelines. */
+.efa-auth-card a.efa-google-btn,
+.efa-auth-card button.efa-google-btn[type="submit"] {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 44px;
+	margin: 0 0 var(--efa-space-md);
+	padding: 10px 16px;
+	border: 1px solid #dadce0;
+	border-radius: var(--efa-radius-sm);
+	background: #fff;
+	color: #1f1f1f;
+	font-family: Lexend, sans-serif;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1.2;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.efa-auth-card a.efa-google-btn:hover,
+.efa-auth-card button.efa-google-btn[type="submit"]:hover {
+	background: #f8faff;
+	border-color: #c6d4ea;
+	color: #1f1f1f;
+}
+
+.efa-google-btn__mark {
+	width: 18px;
+	height: 18px;
+	flex: none;
+}
+
+.efa-auth-card .efa-auth-divider {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 0 0 var(--efa-space-md);
+	font-size: 12px;
+	color: var(--efa-muted);
+}
+
+.efa-auth-divider::before,
+.efa-auth-divider::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--efa-border);
+}
+
+/* Learner / teacher: two selectable cards rather than a bare radio pair. */
+.efa-role-choice {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--efa-space-sm);
+	margin: 0 0 var(--efa-space-md);
+	padding: 0;
+	border: 0;
+}
+
+.efa-role-choice legend {
+	grid-column: 1 / -1;
+	margin: 0 0 6px;
+	padding: 0;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--efa-ink);
+}
+
+.efa-auth-card label.efa-role-choice__option {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	margin: 0;
+	padding: 8px 10px;
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	background: #fff;
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1.3;
+	text-align: center;
+	color: var(--efa-ink);
+	cursor: pointer;
+}
+
+.efa-role-choice__option input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.efa-auth-card label.efa-role-choice__option:has(input:checked) {
+	border-color: var(--efa-accent);
+	background: #f0f6fc;
+	box-shadow: inset 0 0 0 1px var(--efa-accent);
+	color: var(--efa-accent);
+}
+
+.efa-auth-card label.efa-role-choice__option:has(input:focus-visible) {
+	outline: 2px solid var(--efa-accent);
+	outline-offset: 2px;
+}
+
+.efa-auth-card input[type="file"],
+.efa-account-section input[type="file"] {
+	display: block;
+	width: 100%;
+	max-width: 360px;
+	box-sizing: border-box;
+	padding: 8px;
+	border: 1px dashed var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-bg);
+	font-family: Lexend, sans-serif;
+	font-size: 13px;
+	color: var(--efa-ink);
+}
+
+/* Header photo. */
+img.efa-account-avatar--photo {
+	object-fit: cover;
+	background: var(--efa-bg);
+}
+
+/* Profile photo row. */
+.efa-photo-field {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--efa-space-md);
+	margin: 0 0 var(--efa-space-md);
+}
+
+.efa-photo-field__preview {
+	flex: none;
+	width: 72px;
+	height: 72px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.efa-photo-field__preview--empty {
+	display: grid;
+	place-items: center;
+	background: var(--efa-accent);
+	color: #fff;
+	font-size: 24px;
+	font-weight: 500;
+}
+
+.efa-photo-field__controls {
+	min-width: 0;
+	flex: 1;
+}
+
+.efa-account-section label.efa-photo-field__remove {
+	margin: 8px 0 0;
+}
+
+.efa-account-section select {
+	display: block;
+	width: 100%;
+	max-width: 360px;
+	box-sizing: border-box;
+	padding: 10px 12px;
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	background: #fff;
+	font-family: Lexend, sans-serif;
+	font-size: 14px;
+	color: #1a1a1a;
+}
+
+/* Your data: side by side at every width (they stacked on phones). */
+.efa-data-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--efa-space-sm);
+}
+
+.efa-data-actions form {
+	flex: 1 1 140px;
+	margin: 0;
+}
+
+.efa-data-actions button[type="submit"] {
+	width: 100%;
+	white-space: nowrap;
+}
+
+/* Destructive, so quieter than the primary buttons: red outline, fills on hover. */
+.efa-account-section button.efa-button-danger[type="submit"] {
+	background: #fff;
+	color: var(--efa-error);
+	box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.45);
+}
+
+.efa-account-section button.efa-button-danger[type="submit"]:hover {
+	background: var(--efa-error-bg);
+	color: var(--efa-error);
+}
+
+.efa-logout {
+	margin: var(--efa-space-md) 0 0;
+}
+
+.efa-account-shell a.efa-logout__button {
+	display: inline-block;
+	padding: 9px 18px;
+	border: 1px solid var(--efa-border);
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-surface);
+	color: var(--efa-ink);
+	font-size: 14px;
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.efa-account-shell a.efa-logout__button:hover {
+	border-color: var(--efa-accent);
+	color: var(--efa-accent);
+}
+
+@media (max-width: 480px) {
+	.efa-auth-card {
+		padding: 20px;
+	}
+
+	.efa-data-actions form {
+		flex-basis: 0;
+	}
+
+	.efa-data-actions button[type="submit"] {
+		padding-left: 10px;
+		padding-right: 10px;
+		font-size: 13px;
+	}
+}
+
+/*
+ * 0.13.1: the photo circle is a wrapper so the picked photo can be shown in
+ * it straight away (assets/js/avatar-picker.js), on sign-up and in Profile.
+ */
+.efa-photo-field__preview {
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	background: var(--efa-bg);
+}
+
+.efa-photo-field__preview img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.efa-photo-field__preview--empty:not(.has-photo) {
+	background: var(--efa-accent);
+	color: #fff;
+}
+
+.efa-photo-field--signup .efa-photo-field__preview--empty:not(.has-photo) {
+	background: var(--efa-bg);
+	color: var(--efa-muted);
+	border: 1px dashed var(--efa-border);
+	box-sizing: border-box;
+}
+
+.efa-photo-field--signup .efa-photo-field__preview {
+	width: 64px;
+	height: 64px;
+}
+
+.efa-auth-card .efa-photo-field__controls label {
+	margin-bottom: 6px;
+}
+
+.efa-photo-field__status {
+	display: block;
+	min-height: 1em;
+	margin-top: 4px;
+	font-size: 12px;
+	line-height: 1.4;
+	color: var(--efa-success);
+}
+
+.efa-photo-field__status:empty {
+	display: none;
+}
+
+.efa-photo-field__status.is-error {
+	color: var(--efa-error);
+}
+
+.efa-auth-card button[type="submit"]:disabled,
+.efa-account-section button[type="submit"]:disabled {
+	opacity: 0.7;
+	cursor: progress;
+}
+
+/* 0.13.1: the theme also title-cased the home cards' headings ("Review Your Mistakes"); cover every heading on the page. */
+.efa-account-shell h1,
+.efa-account-shell h2,
+.efa-account-shell h3,
+.efa-auth-page h2 {
+	text-transform: none;
+}
+
+/*
+ * 0.14.0: standalone login / sign-up pages ([efa_login], [efa_signup]).
+ * One focused form beside a brand panel (site-counted facts only). The
+ * panel is the site's accent-to-ink gradient; on phones it folds away so
+ * the form comes first.
+ */
+.efa-auth-page.efa-auth-standalone {
+	max-width: 1040px;
+}
+
+.efa-auth-split {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--efa-space-md);
+	align-items: stretch;
+}
+
+.efa-auth-standalone.has-panel .efa-auth-split {
+	grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+
+.efa-auth-standalone:not(.has-panel) .efa-auth-main {
+	max-width: 480px;
+	width: 100%;
+	margin: 0 auto;
+}
+
+.efa-auth-panel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--efa-space-md);
+	padding: 36px 32px;
+	border-radius: var(--efa-radius-md);
+	background: linear-gradient(160deg, #075aae 0%, #0e2a4a 100%);
+	color: #fff;
+}
+
+.efa-auth-page .efa-auth-panel p {
+	margin: 0;
+}
+
+.efa-auth-panel__eyebrow {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.75);
+}
+
+.efa-auth-page .efa-auth-panel__title {
+	font-size: 26px;
+	font-weight: 500;
+	line-height: 1.25;
+	color: #fff;
+}
+
+.efa-auth-panel__list {
+	display: grid;
+	gap: 16px;
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.efa-auth-panel__list li {
+	display: grid;
+	grid-template-columns: 36px minmax(0, 1fr);
+	gap: 12px;
+	align-items: start;
+	font-size: 14px;
+	line-height: 1.5;
+	color: rgba(255, 255, 255, 0.85);
+}
+
+.efa-auth-panel__list strong {
+	display: block;
+	font-weight: 500;
+	color: #fff;
+}
+
+.efa-auth-panel__icon {
+	box-sizing: border-box;
+	width: 36px;
+	height: 36px;
+	padding: 8px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.14);
+	color: #fff;
+}
+
+.efa-auth-page .efa-auth-panel__foot {
+	margin-top: auto;
+	padding-top: 8px;
+	font-size: 13px;
+	color: rgba(255, 255, 255, 0.75);
+}
+
+.efa-auth-main {
+	margin: 0;
+	padding: 36px 40px;
+}
+
+.efa-auth-page h1.efa-auth-title {
+	margin: 0 0 6px;
+	font-size: 28px;
+	text-transform: none;
+}
+
+.efa-auth-page .efa-auth-switch {
+	margin: 0 0 24px;
+	font-size: 14px;
+	color: var(--efa-muted);
+}
+
+.efa-auth-page .efa-auth-switch a {
+	color: var(--efa-accent);
+	font-weight: 500;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.efa-auth-page .efa-auth-switch a:hover {
+	text-decoration: underline;
+}
+
+/* "Remember me" and "Forgot your password?" on one row. */
+.efa-auth-card p.efa-auth-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.efa-auth-card p.efa-auth-row label {
+	margin: 0;
+}
+
+.efa-auth-card p.efa-auth-row a {
+	font-size: 13px;
+	color: var(--efa-accent);
+}
+
+.efa-auth-card a.efa-auth-submit--link {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	padding: 12px 20px;
+	border-radius: var(--efa-radius-sm);
+	background: var(--efa-accent);
+	color: #fff;
+	font-weight: 500;
+	text-align: center;
+	text-decoration: none;
+}
+
+/* Password Show / Hide. */
+.efa-pw-field {
+	position: relative;
+	display: block;
+	max-width: 360px;
+}
+
+.efa-auth-card .efa-pw-field {
+	max-width: none;
+}
+
+.efa-pw-field.has-toggle input[type="password"],
+.efa-pw-field.has-toggle input[type="text"] {
+	padding-right: 64px;
+}
+
+.efa-auth-card .efa-pw-field button.efa-pw-toggle,
+.efa-account-section .efa-pw-field button.efa-pw-toggle[type="button"] {
+	position: absolute;
+	top: 50%;
+	right: 6px;
+	transform: translateY(-50%);
+	padding: 4px 10px;
+	border: 0;
+	border-radius: var(--efa-radius-sm);
+	background: transparent;
+	color: var(--efa-accent);
+	font-family: Lexend, sans-serif;
+	font-size: 13px;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+.efa-auth-card .efa-pw-field button.efa-pw-toggle:hover,
+.efa-account-section .efa-pw-field button.efa-pw-toggle[type="button"]:hover {
+	background: #f0f6fc;
+	color: var(--efa-accent);
+}
+
+@media (max-width: 900px) {
+	.efa-auth-standalone.has-panel .efa-auth-split {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	/* Form first on phones and tablets; the panel follows as a compact summary. */
+	.efa-auth-standalone .efa-auth-panel {
+		order: 2;
+		padding: 24px;
+	}
+
+	.efa-auth-page .efa-auth-panel__title {
+		font-size: 20px;
+	}
+}
+
+@media (max-width: 480px) {
+	.efa-auth-main {
+		padding: 24px 20px;
+	}
+
+	.efa-auth-page h1.efa-auth-title {
+		font-size: 24px;
+	}
+}
+
+/* 0.14.3: live "passwords match" line under Confirm password. Empty until the learner types there. */
+.efa-auth-card .efa-pw-match,
+.efa-account-section .efa-pw-match {
+	display: block;
+	min-height: 17px;
+	margin-top: 4px;
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.efa-pw-match.is-match {
+	color: #1a7f37;
+}
+
+.efa-pw-match.is-match::before {
+	content: "\2713\00a0";
+}
+
+.efa-pw-match.is-mismatch {
+	color: #b42318;
+}
+
+/* 0.15.0: the member's own photo in the leaderboard circle (initials when there is none). */
+.efa-leaderboard__avatar {
+	overflow: hidden;
+}
+
+.efa-leaderboard__avatar img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+/*
+ * 0.15.2: the top three are gold, platinum and bronze coins, as in the
+ * [efa_weekly_top] sidebar card (templates/public/weekly-top.php). Keyed on
+ * data-rank, so tied learners share a metal; the number is stamped in a dark
+ * shade of each metal (5.6:1 contrast or better where the digits sit).
+ */
+.efa-leaderboard__row[data-rank="1"] .efa-leaderboard__rank,
+.efa-leaderboard__row[data-rank="2"] .efa-leaderboard__rank,
+.efa-leaderboard__row[data-rank="3"] .efa-leaderboard__rank {
+	display: inline-grid;
+	place-items: center;
+	justify-self: center;
+	box-sizing: border-box;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1;
+	box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.85), inset 0 -2px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(14, 42, 74, 0.25);
+}
+
+.efa-leaderboard__row[data-rank="1"] .efa-leaderboard__rank {
+	background: radial-gradient(circle at 32% 28%, #fffbe6 0, #ffe27a 18%, #f2c230 42%, #d99c0b 70%, #9c6a00 100%);
+	border: 1px solid #a87500;
+	color: #5b3b00;
+	text-shadow: 0 1px 0 rgba(255, 244, 200, 0.8);
+}
+
+.efa-leaderboard__row[data-rank="2"] .efa-leaderboard__rank {
+	background: radial-gradient(circle at 32% 28%, #fff 0, #f4f7fa 20%, #dde3ea 45%, #b7c1cc 72%, #8793a1 100%);
+	border: 1px solid #8c98a6;
+	color: #2c3845;
+	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.efa-leaderboard__row[data-rank="3"] .efa-leaderboard__rank {
+	background: radial-gradient(circle at 32% 28%, #ffe6cc 0, #f3b27a 20%, #d98a4a 45%, #b0652a 72%, #7a4015 100%);
+	border: 1px solid #84471a;
+	color: #3e1d05;
+	text-shadow: 0 1px 0 rgba(255, 221, 190, 0.7);
+}
+
+@media (max-width: 640px) {
+	.efa-leaderboard__row[data-rank="1"] .efa-leaderboard__rank,
+	.efa-leaderboard__row[data-rank="2"] .efa-leaderboard__rank,
+	.efa-leaderboard__row[data-rank="3"] .efa-leaderboard__rank {
+		width: 24px;
+		height: 24px;
+		font-size: 12px;
+	}
+}
