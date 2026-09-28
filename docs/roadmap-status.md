@@ -56,19 +56,37 @@ The older roadmap (English Learning Hub skill: WGP 2.9 / Core 1.4 / Study 1.3) i
   - Give the menu item a visual accent (CSS class `ef-nav-level-test`).
   - Check sign-up → test → enrolment conversion in the usage and level data.
 
-### 3. Remove / redirect old pages; fix the logged-in menu: TODO
-- **Paid Memberships Pro pages** (plugin removed, raw shortcodes): `/membership-account/` (+ billing, cancel, orders, your-profile), `/membership-checkout/` (+ confirmation), `/membership-levels/`.
-- **WooCommerce pages** (plugin inactive): `/cart/`, `/shop/`. `/my-account/` must stay: the Account plugin uses it, although its content is still `[woocommerce_my_account]`.
-- **Other leftovers:**
-  - Forum `/forum/` (Q&A plugin gone)
-  - Tutor `/dashboard/`; the Tutor student/instructor registration pages already redirect to `/sign-up/`
-  - `um_form` / `bp-email` posts
-  - Leftover tables `wp_pmpro_*`, `wp_um_metadata`
-- **Off-audience utilities** (run through the five gates: keep / redirect / remove): Image to Text, JPG to PDF, Text to PDF, case converters, Word Counter, `/tools/`, `/the-post-grid/`.
-- **Logged-in account menu** (`loggedin_account_menu`) is stale: it points to a draft page (`?page_id=3204`) and lists Linguistics/IELTS; there is no Practice or Games. Check whether the theme still shows it.
-- Pages that are published but not linked from any menu: Daily Wordle Unlimited, Word Search Solver, Word Scrambler.
-- **Three quiz systems:** QSM (49 quizzes, declining; top ones are Complex Sentences Quiz and 50 Mixed English Grammar Quiz), Quiz Cat (13), and Tutor quizzes + Study tools. Decide on consolidation.
-- Use 301 redirects (Rank Math redirections) for anything with traffic.
+### 3. Remove / redirect old pages; fix the logged-in menu: **PARTLY DONE 2026-09-28**
+Owner chose group A only; the rest were reviewed and deliberately left as they are.
+
+- **Done (group A):** trashed 12 broken pages from removed plugins. Each had 0 views in the last 90 days, and nothing links to them.
+  - Paid Memberships Pro pages (8) and `/cart/`, `/shop/` → 301 to `/pricing/` (Rank Math redirect 17)
+  - `/forum/` → 301 to `/contact-us/` (redirect 18)
+  - `/the-post-grid/` → 301 to `/` (redirect 19)
+  - The redirect IDs are also in the option `ef_r3_redirect_ids`.
+  - Backup: `ef-backups/leftover-pages-20260928-085001.json`. The pages are in the WordPress trash, and WordPress empties the trash after 30 days.
+- **Evidence** (GA4 via Site Kit, last 90 days; 25,239 page views across 2,000 URLs):
+
+  | Group | Pages | Views |
+  |---|---|---|
+  | Off-topic utilities | JPG/Text to PDF, Image to Text, case converters, Word Counter | 0–3 each |
+  | Their hub | `/tools/` | 41 |
+  | Not in any menu | Word Search Solver | 145 |
+  | Not in any menu | Daily Wordle Unlimited | 144 |
+  | Not in any menu | Word Scrambler | 0 |
+
+- **Not done, by owner decision (revisit later):**
+  - B: trash the utilities + `/tools/` with 301s to `/word-tools/`
+  - C: add Daily Wordle Unlimited to Games, and Word Search Solver + Word Scrambler to Word Tools
+  - D: unassign the "Logged In Account Menu". It is **not displayed anywhere**: the Astra header is logo + primary menu + search + an HTML block, so this is cosmetic.
+  - Leftover DB data from removed plugins (`wp_pmpro_*`, `wp_um_metadata`, `um_form`/`bp-email`/`buddypress`/Q&A posts, the Woo cart/shop options): left for a later database tidy-up.
+- **Keep as is:**
+  - `/dashboard/` (Tutor student dashboard, 109 views)
+  - `/student-registration/` and `/instructor-registration/` (Tutor settings reference them; they already 302 to `/sign-up/`)
+  - `/my-account/`
+  - `/quizzes/` (QSM quiz hub, 61 views)
+- **QSM is alive, so do not remove it.** 66 posts embed QSM quizzes; those posts had about 2,960 views in 90 days (~12% of site traffic), with 20–120 completed quizzes a month in 2026. Top pages: 50 English grammar quiz (412), types of pronouns (434), types of morphemes (425). Consolidating into Study tools or Tutor would be a content migration project, not a cleanup.
+- Rank Math 404 log: only one-off multi-word dictionary lookups (e.g. `dictionary/figure out`); nothing to redirect.
 
 ### 4. `/learn/` landing page + one hub per CEFR level: TODO
 - "Learn" in the menu currently points to `/grammar/`. There is no `/learn/` page.
