@@ -3,7 +3,7 @@
  * Plugin Name:       English Finders Core
  * Plugin URI:        https://englishfinders.com
  * Description:       Shared data layer and service foundation for the English Finders plugin suite. Owns the dictionary tables and provides word data, provider connections, and entitlement services to Word Games Pro and Learning Toolkit Pro.
- * Version:           1.14.0
+ * Version:           1.15.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * Author:            English Finders
@@ -31,8 +31,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * This mirrors the WUC_VERSION / WUC_DB_VERSION split already used by
  * Word Games Pro.
  */
-define( 'EFC_VERSION', '1.14.0' );
-define( 'EFC_DB_VERSION', '1.12.0' );
+define( 'EFC_VERSION', '1.15.0' );
+define( 'EFC_DB_VERSION', '1.15.0' );
 define( 'EFC_FILE', __FILE__ );
 define( 'EFC_PATH', plugin_dir_path( __FILE__ ) );
 define( 'EFC_URL', plugin_dir_url( __FILE__ ) );

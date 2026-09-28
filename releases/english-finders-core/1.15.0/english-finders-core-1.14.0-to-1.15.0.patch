@@ -1,0 +1,800 @@
+diff --git a/english-finders-core/english-finders-core.php b/english-finders-core/english-finders-core.php
+index 5bc6a34..b59eac2 100644
+--- a/english-finders-core/english-finders-core.php
++++ b/english-finders-core/english-finders-core.php
+@@ -3,7 +3,7 @@
+  * Plugin Name:       English Finders Core
+  * Plugin URI:        https://englishfinders.com
+  * Description:       Shared data layer and service foundation for the English Finders plugin suite. Owns the dictionary tables and provides word data, provider connections, and entitlement services to Word Games Pro and Learning Toolkit Pro.
+- * Version:           1.14.0
++ * Version:           1.15.0
+  * Requires at least: 6.6
+  * Requires PHP:      8.1
+  * Author:            English Finders
+@@ -31,8 +31,8 @@ if ( ! defined( 'ABSPATH' ) ) {
+  * This mirrors the WUC_VERSION / WUC_DB_VERSION split already used by
+  * Word Games Pro.
+  */
+-define( 'EFC_VERSION', '1.14.0' );
+-define( 'EFC_DB_VERSION', '1.12.0' );
++define( 'EFC_VERSION', '1.15.0' );
++define( 'EFC_DB_VERSION', '1.15.0' );
+ define( 'EFC_FILE', __FILE__ );
+ define( 'EFC_PATH', plugin_dir_path( __FILE__ ) );
+ define( 'EFC_URL', plugin_dir_url( __FILE__ ) );
+diff --git a/english-finders-core/readme.txt b/english-finders-core/readme.txt
+index 027dd95..4de991c 100644
+--- a/english-finders-core/readme.txt
++++ b/english-finders-core/readme.txt
+@@ -3,7 +3,7 @@ Contributors: englishfinders
+ Requires at least: 6.6
+ Tested up to: 6.9
+ Requires PHP: 8.1
+-Stable tag: 1.14.0
++Stable tag: 1.15.0
+ License: GPL-2.0-or-later
+ License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ 
+@@ -27,6 +27,15 @@ Core must be active before Word Games Pro or Learning Toolkit Pro can run. WordP
+ 
+ == Changelog ==
+ 
++= 1.15.0 =
++* Added: usage counts for every practice tool and game, including visitors who are not signed in. A small inline footer script listens for the shared ef:progress browser event (already fired by English Finders Study tools and Word Games Pro games), adds it up while the page is open, and sends one report when the page is hidden or left (sendBeacon). One request per active page, not one per answer.
++* New REST route POST efc/v1/usage (no nonce, since pages are cached long-term). Reports are strictly validated: source must look like efs-* or wgp-*, the kind must be correct, solved or finished, counts are capped at 500, there can be at most 30 pairs per report, the body must be under 4 KB, and the Origin must be this site when present. The route only increments counters.
++* **Migration 1.15.0** (`EFC_DB_VERSION` 1.15.0) adds a `usage_daily` table with one row per site day, source and kind (plus a server-side `visit` per source per report). It stores aggregate counts only: no user ID, IP address, cookie or URL. Rolling back is allowed, since nothing in it belongs to a learner.
++* New `usage` service (UsageRepository): add(), totals( $days ), daily_visits( $days ).
++* New screen, Settings -> English Finders Usage, shows visits, correct answers, solved puzzles and finished rounds per tool for the last 7, 30 or 90 days, plus visits per day.
++* Google Analytics 4: when Site Kit's gtag is on the page, the same script also sends ef_engaged (once per tool per page), ef_solved and ef_finished, each with an ef_tool parameter. Individual correct answers are not sent to GA.
++* Filter efc_usage_tracking_enabled (bool) turns off both the script and the route.
++
+ = 1.14.0 =
+ * One XP currency: 1 XP per correct answer. Tutor LMS and QSM quizzes now credit quiz_answer_correct per correct answer (was a flat 15 XP per quiz); a quiz with no correct answers records nothing. New event types for Word Games Pro 2.12.15: game_answer_correct (1), game_solved (5), game_finished (1). Lessons (20) and courses (100) unchanged.
+ * Fixed: Tutor quizzes never earned XP. Core listened to tutor_quiz_finished, which Tutor 4.0.9 fires only when an attempt is finished without answering; a normal submission fires tutor_quiz/attempt_ended. Both are now hooked, plus tutor_quiz_timeout, all crediting an attempt once. An answer an instructor later marks correct (tutor_quiz_review_answer_after) earns its 1 XP then.
+diff --git a/english-finders-core/src/Admin/UsagePage.php b/english-finders-core/src/Admin/UsagePage.php
+new file mode 100644
+index 0000000..0a5d7ae
+--- /dev/null
++++ b/english-finders-core/src/Admin/UsagePage.php
+@@ -0,0 +1,146 @@
++<?php
++/**
++ * Settings -> English Finders Usage (1.15.0).
++ *
++ * Read-only report of the counts UsageRepository keeps: which practice
++ * tools and games are actually used, by visitors and members alike.
++ *
++ * @package EnglishFindersCore
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersCore\Admin;
++
++use EnglishFindersCore\Usage\UsageRepository;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class UsagePage {
++	private const MENU_SLUG  = 'efc-usage';
++	private const CAPABILITY = 'manage_options';
++
++	/** Offered report windows, in days. */
++	private const RANGES = array( 7, 30, 90 );
++
++	public function __construct( private readonly UsageRepository $usage ) {}
++
++	public function register(): void {
++		add_action( 'admin_menu', array( $this, 'add_menu' ) );
++	}
++
++	public function add_menu(): void {
++		add_options_page(
++			__( 'English Finders Usage', 'english-finders-core' ),
++			__( 'English Finders Usage', 'english-finders-core' ),
++			self::CAPABILITY,
++			self::MENU_SLUG,
++			array( $this, 'render' )
++		);
++	}
++
++	/** "efs-grammar-quiz" -> "Grammar Quiz", "wgp-daily-unscramble" -> "Daily Unscramble". */
++	private static function label( string $source ): string {
++		return ucwords( str_replace( '-', ' ', (string) preg_replace( '/^(efs|wgp)-/', '', $source ) ) );
++	}
++
++	private static function plugin_name( string $source ): string {
++		return str_starts_with( $source, 'efs-' ) ? __( 'Practice tool', 'english-finders-core' ) : __( 'Game', 'english-finders-core' );
++	}
++
++	public function render(): void {
++		if ( ! current_user_can( self::CAPABILITY ) ) {
++			wp_die( esc_html__( 'You do not have permission to access this page.', 'english-finders-core' ) );
++		}
++
++		$days = isset( $_GET['days'] ) ? absint( $_GET['days'] ) : 30; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only report filter.
++		$days = in_array( $days, self::RANGES, true ) ? $days : 30;
++
++		$totals = $this->usage->totals( $days );
++		$daily  = $this->usage->daily_visits( min( $days, 30 ) );
++		$max    = max( 1, ...array_values( $daily ) );
++		?>
++		<div class="wrap">
++			<h1><?php esc_html_e( 'English Finders Usage', 'english-finders-core' ); ?></h1>
++			<p class="description" style="max-width:52em">
++				<?php esc_html_e( 'How often each practice tool and game is used, by everyone including visitors who are not signed in. A visit is a page view in which the tool registered at least one correct answer, solved puzzle or finished round. Only daily totals are stored: no names, IP addresses or cookies. Counting started when English Finders Core 1.15.0 was installed.', 'english-finders-core' ); ?>
++			</p>
++
++			<ul class="subsubsub">
++				<?php foreach ( self::RANGES as $i => $range ) : ?>
++					<?php
++					$range_url = add_query_arg(
++						array(
++							'page' => self::MENU_SLUG,
++							'days' => $range,
++						),
++						admin_url( 'options-general.php' )
++					);
++					?>
++					<li>
++						<a href="<?php echo esc_url( $range_url ); ?>"<?php echo $range === $days ? ' class="current" aria-current="page"' : ''; ?>>
++							<?php
++							/* translators: %d: number of days */
++							echo esc_html( sprintf( __( 'Last %d days', 'english-finders-core' ), $range ) );
++							?>
++						</a><?php echo $i < count( self::RANGES ) - 1 ? ' |' : ''; ?>
++					</li>
++				<?php endforeach; ?>
++			</ul>
++			<br class="clear">
++
++			<h2><?php esc_html_e( 'By tool', 'english-finders-core' ); ?></h2>
++			<?php if ( array() === $totals ) : ?>
++				<p><?php esc_html_e( 'Nothing recorded in this period yet.', 'english-finders-core' ); ?></p>
++			<?php else : ?>
++				<table class="widefat striped" style="max-width:60em">
++					<thead>
++						<tr>
++							<th scope="col"><?php esc_html_e( 'Tool', 'english-finders-core' ); ?></th>
++							<th scope="col"><?php esc_html_e( 'Type', 'english-finders-core' ); ?></th>
++							<th scope="col" class="num"><?php esc_html_e( 'Visits', 'english-finders-core' ); ?></th>
++							<th scope="col" class="num"><?php esc_html_e( 'Correct answers', 'english-finders-core' ); ?></th>
++							<th scope="col" class="num"><?php esc_html_e( 'Puzzles solved', 'english-finders-core' ); ?></th>
++							<th scope="col" class="num"><?php esc_html_e( 'Rounds finished', 'english-finders-core' ); ?></th>
++						</tr>
++					</thead>
++					<tbody>
++						<?php foreach ( $totals as $row ) : ?>
++							<tr>
++								<td><strong><?php echo esc_html( self::label( $row['source'] ) ); ?></strong> <code><?php echo esc_html( $row['source'] ); ?></code></td>
++								<td><?php echo esc_html( self::plugin_name( $row['source'] ) ); ?></td>
++								<td class="num"><?php echo esc_html( number_format_i18n( $row['visit'] ) ); ?></td>
++								<td class="num"><?php echo esc_html( number_format_i18n( $row['correct'] ) ); ?></td>
++								<td class="num"><?php echo esc_html( number_format_i18n( $row['solved'] ) ); ?></td>
++								<td class="num"><?php echo esc_html( number_format_i18n( $row['finished'] ) ); ?></td>
++							</tr>
++						<?php endforeach; ?>
++					</tbody>
++				</table>
++			<?php endif; ?>
++
++			<h2><?php esc_html_e( 'Visits per day', 'english-finders-core' ); ?></h2>
++			<table class="widefat striped" style="max-width:40em">
++				<thead>
++					<tr>
++						<th scope="col"><?php esc_html_e( 'Day', 'english-finders-core' ); ?></th>
++						<th scope="col" class="num"><?php esc_html_e( 'Visits', 'english-finders-core' ); ?></th>
++						<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Bar', 'english-finders-core' ); ?></span></th>
++					</tr>
++				</thead>
++				<tbody>
++					<?php foreach ( array_reverse( $daily, true ) as $day => $visits ) : ?>
++						<tr>
++							<td><?php echo esc_html( wp_date( get_option( 'date_format' ), ( new \DateTimeImmutable( $day, wp_timezone() ) )->getTimestamp() ) ); ?></td>
++							<td class="num"><?php echo esc_html( number_format_i18n( $visits ) ); ?></td>
++							<td style="width:50%"><span aria-hidden="true" style="display:block;height:10px;border-radius:2px;background:#2271b1;width:<?php echo esc_attr( (string) round( 100 * $visits / $max ) ); ?>%"></span></td>
++						</tr>
++					<?php endforeach; ?>
++				</tbody>
++			</table>
++		</div>
++		<?php
++	}
++}
+diff --git a/english-finders-core/src/Database/Migrator.php b/english-finders-core/src/Database/Migrator.php
+index 63f7cef..f2d681e 100644
+--- a/english-finders-core/src/Database/Migrator.php
++++ b/english-finders-core/src/Database/Migrator.php
+@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
+ final class Migrator {
+ 	/** @return list<MigrationInterface> */
+ 	public function migrations(): array {
+-		$migrations = array( new InitialMigration(), new AdoptSharedTablesMigration(), new CefrColumnsMigration(), new SenseCefrColumnsMigration(), new BillingTablesMigration(), new BillingEventsCustomerColumnMigration(), new ActivityTablesMigration(), new LevelResultsTableMigration(), new MistakesTableMigration(), new ActivityOccurredAtIndexMigration(), new CertificatesTableMigration() );
++		$migrations = array( new InitialMigration(), new AdoptSharedTablesMigration(), new CefrColumnsMigration(), new SenseCefrColumnsMigration(), new BillingTablesMigration(), new BillingEventsCustomerColumnMigration(), new ActivityTablesMigration(), new LevelResultsTableMigration(), new MistakesTableMigration(), new ActivityOccurredAtIndexMigration(), new CertificatesTableMigration(), new UsageTableMigration() );
+ 
+ 		/**
+ 		 * Filter the registered Core migrations.
+diff --git a/english-finders-core/src/Database/Schema.php b/english-finders-core/src/Database/Schema.php
+index 04ef615..108627b 100644
+--- a/english-finders-core/src/Database/Schema.php
++++ b/english-finders-core/src/Database/Schema.php
+@@ -295,6 +295,21 @@ final class Schema {
+ 				UNIQUE KEY user_course (user_id,course_id),
+ 				UNIQUE KEY code (code)
+ 			) {$collate};",
++
++			/*
++			 * Per-tool usage counts (1.15.0). One row per site day, source
++			 * (e.g. efs-grammar-quiz) and kind (visit/correct/solved/finished),
++			 * holding a running total -- UsageRepository is the only writer.
++			 * Aggregate only: no user, IP or page column, by design.
++			 */
++			'usage_daily' => "CREATE TABLE {$prefix}usage_daily (
++				day date NOT NULL,
++				source varchar(48) NOT NULL,
++				kind varchar(16) NOT NULL,
++				count int(10) unsigned NOT NULL DEFAULT 0,
++				PRIMARY KEY  (day,source,kind),
++				KEY source_day (source,day)
++			) {$collate};",
+ 		);
+ 	}
+ 
+diff --git a/english-finders-core/src/Database/UsageTableMigration.php b/english-finders-core/src/Database/UsageTableMigration.php
+new file mode 100644
+index 0000000..e9541b7
+--- /dev/null
++++ b/english-finders-core/src/Database/UsageTableMigration.php
+@@ -0,0 +1,49 @@
++<?php
++/**
++ * Create the usage_daily table (1.15.0).
++ *
++ * A brand-new table, so dbDelta is the right tool -- same as the other
++ * table migrations.
++ *
++ * @package EnglishFindersCore
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersCore\Database;
++
++use EnglishFindersCore\Contracts\MigrationInterface;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class UsageTableMigration implements MigrationInterface {
++	public function version(): string {
++		return '1.15.0';
++	}
++
++	public function description(): string {
++		return 'Create the usage_daily table for per-tool usage counts.';
++	}
++
++	public function up(): void {
++		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
++
++		dbDelta( Schema::definitions()['usage_daily'] );
++	}
++
++	/**
++	 * Dropping loses the usage history, but it is aggregate counts only --
++	 * nothing a learner owns -- so, unlike the notebook or certificates,
++	 * rolling back is allowed.
++	 */
++	public function down(): void {
++		global $wpdb;
++
++		$name = Schema::table( 'usage_daily' );
++
++		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange
++		$wpdb->query( "DROP TABLE IF EXISTS {$name}" );
++	}
++}
+diff --git a/english-finders-core/src/Plugin.php b/english-finders-core/src/Plugin.php
+index eb58491..43e00a6 100644
+--- a/english-finders-core/src/Plugin.php
++++ b/english-finders-core/src/Plugin.php
+@@ -11,6 +11,7 @@ namespace EnglishFindersCore;
+ 
+ use EnglishFindersCore\Activity\ActivityRecorder;
+ use EnglishFindersCore\Admin\SettingsPage;
++use EnglishFindersCore\Admin\UsagePage;
+ use EnglishFindersCore\Assessment\LevelResultRepository;
+ use EnglishFindersCore\Certificates\CertificateRepository;
+ use EnglishFindersCore\Mistakes\MistakeRepository;
+@@ -26,6 +27,8 @@ use EnglishFindersCore\Core\Cache;
+ use EnglishFindersCore\Integrations\QsmIntegration;
+ use EnglishFindersCore\Integrations\TutorIntegration;
+ use EnglishFindersCore\Models\WordRepository;
++use EnglishFindersCore\Usage\UsageController;
++use EnglishFindersCore\Usage\UsageRepository;
+ use EnglishFindersCore\Database\Installer;
+ use EnglishFindersCore\Database\Migrator;
+ 
+@@ -71,8 +74,15 @@ final class Plugin {
+ 		 */
+ 		if ( is_admin() ) {
+ 			( new SettingsPage() )->register();
++			( new UsagePage( $this->get( 'usage' ) ) )->register();
+ 		}
+ 
++		/*
++		 * Unconditional: the footer script is printed on public pages and the
++		 * REST route must exist on every request. 1.15.0.
++		 */
++		( new UsageController( $this->get( 'usage' ) ) )->register();
++
+ 		/*
+ 		 * Unconditional, unlike the settings screen above: Paddle posts to
+ 		 * this route from outside WordPress entirely, so it must be
+@@ -193,6 +203,12 @@ final class Plugin {
+ 		 * on course completion; English Finders Account reads them.
+ 		 */
+ 		$this->singleton( 'certificates', static fn (): CertificateRepository => new CertificateRepository() );
++
++		/*
++		 * Per-tool usage counts (1.15.0), fed by UsageController from the
++		 * browser's ef:progress events. See UsageRepository's own docblock.
++		 */
++		$this->singleton( 'usage', static fn (): UsageRepository => new UsageRepository() );
+ 	}
+ 
+ 	/**
+diff --git a/english-finders-core/src/Usage/UsageController.php b/english-finders-core/src/Usage/UsageController.php
+new file mode 100644
+index 0000000..5b3b04c
+--- /dev/null
++++ b/english-finders-core/src/Usage/UsageController.php
+@@ -0,0 +1,153 @@
++<?php
++/**
++ * Collects `ef:progress` usage from the browser (1.15.0).
++ *
++ * Front end: a small inline script, printed in the footer of every public
++ * page, listens for the shared `ef:progress` event that Study tools and
++ * Word Games Pro games already dispatch. It adds the events up while the
++ * page is open and sends one report when the page is hidden or left
++ * (navigator.sendBeacon), so an active page costs one request, not one per
++ * answer. The same events go to Google Analytics 4 when Site Kit's `gtag`
++ * is on the page: `ef_engaged` once per tool per page, plus `ef_solved` /
++ * `ef_finished` (correct answers are too frequent to send one by one).
++ *
++ * Server: POST efc/v1/usage. No nonce, on purpose, for the same reason as
++ * the level test -- pages are served from a long-lived cache, so a nonce
++ * printed into one would routinely be expired. The route writes nothing but
++ * aggregate counters (see UsageRepository), strictly validated and capped,
++ * so the worst a forged request can do is inflate a count.
++ *
++ * Filter: efc_usage_tracking_enabled (bool) -- false removes the script.
++ *
++ * @package EnglishFindersCore
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersCore\Usage;
++
++use WP_REST_Request;
++use WP_REST_Response;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class UsageController {
++	private const REST_NAMESPACE = 'efc/v1';
++	private const ROUTE          = '/usage';
++
++	/** A report is a few hundred bytes; anything much larger is not from our script. */
++	private const MAX_BODY_BYTES = 4096;
++
++	public function __construct( private readonly UsageRepository $usage ) {}
++
++	public function register(): void {
++		add_action( 'rest_api_init', array( $this, 'register_route' ) );
++		add_action( 'wp_footer', array( $this, 'print_script' ), 99 );
++	}
++
++	public function register_route(): void {
++		register_rest_route(
++			self::REST_NAMESPACE,
++			self::ROUTE,
++			array(
++				'methods'             => 'POST',
++				'callback'            => array( $this, 'handle' ),
++				'permission_callback' => '__return_true',
++			)
++		);
++	}
++
++	public function handle( WP_REST_Request $request ): WP_REST_Response {
++		if ( ! self::enabled() ) {
++			return new WP_REST_Response( null, 204 );
++		}
++
++		if ( ! self::same_site( (string) $request->get_header( 'origin' ) ) ) {
++			return new WP_REST_Response( array( 'error' => 'forbidden_origin' ), 403 );
++		}
++
++		$body = $request->get_body();
++		if ( '' === $body || strlen( $body ) > self::MAX_BODY_BYTES ) {
++			return new WP_REST_Response( array( 'error' => 'bad_request' ), 400 );
++		}
++
++		/*
++		 * sendBeacon posts text/plain (a JSON content type would need a CORS
++		 * preflight, which beacons cannot do), so WordPress does not parse the
++		 * body into params -- it is decoded here instead.
++		 */
++		$data   = json_decode( $body, true );
++		$counts = UsageRepository::normalize( is_array( $data ) ? ( $data['e'] ?? null ) : null );
++		if ( array() === $counts ) {
++			return new WP_REST_Response( array( 'error' => 'bad_request' ), 400 );
++		}
++
++		$this->usage->add( $counts );
++
++		return new WP_REST_Response( null, 204 );
++	}
++
++	/**
++	 * A browser always sends Origin with a beacon; when present it must be
++	 * this site. Absent Origin is allowed (some privacy tools strip it).
++	 */
++	private static function same_site( string $origin ): bool {
++		if ( '' === $origin ) {
++			return true;
++		}
++
++		$host = wp_parse_url( home_url(), PHP_URL_HOST );
++
++		return is_string( $host ) && strtolower( (string) wp_parse_url( $origin, PHP_URL_HOST ) ) === strtolower( $host );
++	}
++
++	public static function enabled(): bool {
++		return (bool) apply_filters( 'efc_usage_tracking_enabled', true );
++	}
++
++	public function print_script(): void {
++		if ( ! self::enabled() || is_admin() || is_feed() || is_embed() ) {
++			return;
++		}
++
++		$config = wp_json_encode(
++			array(
++				'url'     => rest_url( self::REST_NAMESPACE . self::ROUTE ),
++				'pattern' => '^(efs|wgp)-[a-z0-9-]{1,40}$',
++				'kinds'   => UsageRepository::REPORTED_KINDS,
++			)
++		);
++
++		$script = <<<'JS'
++(function (c) {
++	if (!c || !window.JSON) return;
++	var re = new RegExp(c.pattern), counts = {}, pending = 0, seen = {};
++	document.addEventListener('ef:progress', function (e) {
++		var d = (e && e.detail) || {}, s = String(d.source || ''), k = String(d.kind || '');
++		if (!re.test(s) || c.kinds.indexOf(k) < 0) return;
++		counts[s + ':' + k] = (counts[s + ':' + k] || 0) + 1;
++		pending++;
++		if (typeof window.gtag === 'function') {
++			if (!seen[s]) { seen[s] = 1; window.gtag('event', 'ef_engaged', { ef_tool: s }); }
++			if (k !== 'correct') window.gtag('event', 'ef_' + k, { ef_tool: s });
++		}
++	});
++	function flush() {
++		if (!pending) return;
++		var body = JSON.stringify({ v: 1, e: counts });
++		counts = {}; pending = 0;
++		try {
++			if (navigator.sendBeacon && navigator.sendBeacon(c.url, new Blob([body], { type: 'text/plain' }))) return;
++			if (window.fetch) fetch(c.url, { method: 'POST', body: body, keepalive: true, credentials: 'omit', headers: { 'Content-Type': 'text/plain' } });
++		} catch (err) {}
++	}
++	document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
++	window.addEventListener('pagehide', flush);
++})(%s);
++JS;
++
++		wp_print_inline_script_tag( sprintf( $script, $config ), array( 'id' => 'efc-usage' ) );
++	}
++}
+diff --git a/english-finders-core/src/Usage/UsageRepository.php b/english-finders-core/src/Usage/UsageRepository.php
+new file mode 100644
+index 0000000..eaf9004
+--- /dev/null
++++ b/english-finders-core/src/Usage/UsageRepository.php
+@@ -0,0 +1,216 @@
++<?php
++/**
++ * Daily usage counts per practice tool and game (1.15.0).
++ *
++ * Every English Finders Study tool and Word Games Pro game already fires the
++ * shared `ef:progress` browser event (a correct answer, a solved puzzle, a
++ * finished round), but until now nothing counted it for visitors who are not
++ * signed in -- which is nearly everyone. ActivityRecorder only sees members,
++ * and Word Games Pro's own analytics table only logs searches. So there was
++ * no way to tell which tools are actually used.
++ *
++ * This keeps aggregate counts only: one row per site day, source and kind,
++ * with a running total. No user id, IP address, cookie or page URL is
++ * stored, so there is nothing personal to export or erase.
++ *
++ * Kinds:
++ *  - `visit`    one per source per report from a browser -- a page view (or a
++ *               return to the tab) in which that tool registered any progress.
++ *               Recorded by the server, never sent by the browser.
++ *  - `correct`  a correct answer.
++ *  - `solved`   a solved puzzle.
++ *  - `finished` a finished round or quiz.
++ *
++ * @package EnglishFindersCore
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersCore\Usage;
++
++use EnglishFindersCore\Database\Schema;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class UsageRepository {
++	public const KIND_VISIT = 'visit';
++
++	/** Kinds the browser may report, as fired in `ef:progress` detail.kind. */
++	public const REPORTED_KINDS = array( 'correct', 'solved', 'finished' );
++
++	/** `efs-grammar-quiz`, `wgp-daily-unscramble`, `wgp-wordle-daily`... */
++	public const SOURCE_PATTERN = '/^(efs|wgp)-[a-z0-9-]{1,40}$/';
++
++	/** Upper bound for one count in one report; a real visit stays far below it. */
++	public const MAX_COUNT = 500;
++
++	/** Upper bound for distinct source/kind pairs in one report. */
++	public const MAX_PAIRS = 30;
++
++	public static function is_valid_source( string $source ): bool {
++		return 1 === preg_match( self::SOURCE_PATTERN, $source );
++	}
++
++	/**
++	 * Turn a browser report into clean counts, dropping anything malformed.
++	 *
++	 * @param mixed $events Decoded `e` map: "source:kind" => count.
++	 * @return array<string,array<string,int>> source => kind => count, including a `visit` per source.
++	 */
++	public static function normalize( mixed $events ): array {
++		if ( ! is_array( $events ) ) {
++			return array();
++		}
++
++		$out = array();
++		foreach ( array_slice( $events, 0, self::MAX_PAIRS, true ) as $key => $count ) {
++			$parts = explode( ':', (string) $key );
++			if ( 2 !== count( $parts ) ) {
++				continue;
++			}
++
++			list( $source, $kind ) = $parts;
++			$count                 = is_numeric( $count ) ? (int) $count : 0;
++			if ( ! self::is_valid_source( $source ) || ! in_array( $kind, self::REPORTED_KINDS, true ) || $count < 1 ) {
++				continue;
++			}
++
++			$out[ $source ][ $kind ]            = min( self::MAX_COUNT, $count );
++			$out[ $source ][ self::KIND_VISIT ] = 1;
++		}
++
++		return $out;
++	}
++
++	/**
++	 * Add counts to today's rows.
++	 *
++	 * One statement for the whole report: each row is created at its count, or
++	 * incremented by it when it already exists.
++	 *
++	 * @param array<string,array<string,int>> $counts Output of normalize().
++	 */
++	public function add( array $counts, ?string $day = null ): bool {
++		global $wpdb;
++
++		$day    = $day ?? current_time( 'Y-m-d' );
++		$rows   = array();
++		$values = array();
++		foreach ( $counts as $source => $kinds ) {
++			foreach ( $kinds as $kind => $count ) {
++				$rows[]   = '(%s,%s,%s,%d)';
++				$values[] = $day;
++				$values[] = $source;
++				$values[] = $kind;
++				$values[] = $count;
++			}
++		}
++
++		if ( array() === $rows ) {
++			return false;
++		}
++
++		$table = Schema::table( 'usage_daily' );
++		$sql   = $wpdb->prepare(
++			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- table name is prefix-derived; $rows holds only literal placeholder groups built above.
++			"INSERT INTO {$table} (day, source, kind, count) VALUES " . implode( ',', $rows ) . ' ON DUPLICATE KEY UPDATE count = count + VALUES(count)',
++			$values
++		);
++
++		return false !== $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- prepared above.
++	}
++
++	/**
++	 * Totals per source over the last $days site days, busiest first.
++	 *
++	 * @return list<array{source:string,visit:int,correct:int,solved:int,finished:int}>
++	 */
++	public function totals( int $days ): array {
++		global $wpdb;
++
++		$table = Schema::table( 'usage_daily' );
++		$rows  = $wpdb->get_results(
++			$wpdb->prepare(
++				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is prefix-derived.
++				"SELECT source, kind, SUM(count) AS total FROM {$table} WHERE day >= %s GROUP BY source, kind",
++				self::first_day( $days )
++			),
++			ARRAY_A
++		);
++
++		$out = array();
++		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
++			$source = (string) $row['source'];
++			$kind   = (string) $row['kind'];
++			if ( ! isset( $out[ $source ] ) ) {
++				$out[ $source ] = array(
++					'source'   => $source,
++					'visit'    => 0,
++					'correct'  => 0,
++					'solved'   => 0,
++					'finished' => 0,
++				);
++			}
++			if ( array_key_exists( $kind, $out[ $source ] ) && 'source' !== $kind ) {
++				$out[ $source ][ $kind ] = (int) $row['total'];
++			}
++		}
++
++		$out = array_values( $out );
++		usort(
++			$out,
++			static function ( array $a, array $b ): int {
++				$by_visits = $b['visit'] <=> $a['visit'];
++				return 0 !== $by_visits ? $by_visits : strcmp( $a['source'], $b['source'] );
++			}
++		);
++
++		return $out;
++	}
++
++	/**
++	 * Visits per site day over the last $days days, all sources together.
++	 * Days without any visit are included as 0 so a quiet day is visible.
++	 *
++	 * @return array<string,int> Y-m-d => visits, oldest first.
++	 */
++	public function daily_visits( int $days ): array {
++		global $wpdb;
++
++		$table = Schema::table( 'usage_daily' );
++		$first = self::first_day( $days );
++		$rows  = $wpdb->get_results(
++			$wpdb->prepare(
++				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is prefix-derived.
++				"SELECT day, SUM(count) AS total FROM {$table} WHERE kind = %s AND day >= %s GROUP BY day",
++				self::KIND_VISIT,
++				$first
++			),
++			ARRAY_A
++		);
++
++		$found = array();
++		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
++			$found[ (string) $row['day'] ] = (int) $row['total'];
++		}
++
++		$out   = array();
++		$date  = new \DateTimeImmutable( $first, wp_timezone() );
++		$count = max( 1, $days );
++		for ( $i = 0; $i < $count; $i++ ) {
++			$key         = $date->modify( "+{$i} days" )->format( 'Y-m-d' );
++			$out[ $key ] = $found[ $key ] ?? 0;
++		}
++
++		return $out;
++	}
++
++	/** First site day of a window of $days days ending today. */
++	private static function first_day( int $days ): string {
++		$days = max( 1, $days );
++
++		return ( new \DateTimeImmutable( current_time( 'Y-m-d' ), wp_timezone() ) )->modify( '-' . ( $days - 1 ) . ' days' )->format( 'Y-m-d' );
++	}
++}
+diff --git a/english-finders-core/tests/test_usage.php b/english-finders-core/tests/test_usage.php
+new file mode 100644
+index 0000000..ff6e4eb
+--- /dev/null
++++ b/english-finders-core/tests/test_usage.php
+@@ -0,0 +1,64 @@
++<?php
++/**
++ * UsageRepository::normalize() assertions (1.15.0).
++ *
++ * Standalone, no WordPress needed: php tests/test_usage.php
++ *
++ * @package EnglishFindersCore
++ */
++
++namespace EnglishFindersCore\Database {
++	define( 'ABSPATH', __DIR__ . '/' );
++
++	/** Minimal stand-in: normalize() never touches the database. */
++	final class Schema {
++		public static function table( string $name ): string {
++			return 'wp_efc_' . $name;
++		}
++	}
++}
++
++namespace {
++	require dirname( __DIR__ ) . '/src/Usage/UsageRepository.php';
++
++	use EnglishFindersCore\Usage\UsageRepository as U;
++
++	$efc_count = 0;
++	$efc_ok    = static function ( bool $cond, string $message ) use ( &$efc_count ): void {
++		if ( ! $cond ) {
++			fwrite( STDERR, "FAIL: {$message}\n" );
++			exit( 1 );
++		}
++		++$efc_count;
++	};
++
++	$efc_ok(
++		U::normalize( array( 'efs-grammar-quiz:correct' => 3, 'wgp-daily-unscramble:solved' => 1 ) ) == array(
++			'efs-grammar-quiz'     => array( 'correct' => 3, 'visit' => 1 ),
++			'wgp-daily-unscramble' => array( 'solved' => 1, 'visit' => 1 ),
++		),
++		'counts plus one visit per source'
++	);
++	$efc_ok( array() === U::normalize( array( 'evil:correct' => 1 ) ), 'unknown prefix dropped' );
++	$efc_ok( array() === U::normalize( array( 'efs-x:visit' => 5 ) ), 'browser cannot report visits' );
++	$efc_ok( array() === U::normalize( array( 'efs-x:correct' => 0 ) ), 'zero dropped' );
++	$efc_ok( array() === U::normalize( array( 'efs-x:correct' => -4 ) ), 'negative dropped' );
++	$efc_ok( array() === U::normalize( array( 'efs-x:correct' => 'abc' ) ), 'non-numeric dropped' );
++	$efc_ok( 500 === U::normalize( array( 'efs-x:correct' => 99999 ) )['efs-x']['correct'], 'count capped at 500' );
++	$efc_ok( array() === U::normalize( array( 'efs-X:correct' => 1 ) ), 'uppercase source dropped' );
++	$efc_ok( array() === U::normalize( array( 'efs-x:correct:y' => 1 ) ), 'extra colon dropped' );
++	$efc_ok( array() === U::normalize( array( 'efs-' . str_repeat( 'a', 41 ) . ':correct' => 1 ) ), 'over-long source dropped' );
++	$efc_ok( array() === U::normalize( 'str' ) && array() === U::normalize( null ), 'non-array input' );
++
++	$efc_many = array();
++	for ( $i = 0; $i < 50; $i++ ) {
++		$efc_many[ "efs-t{$i}:correct" ] = 1;
++	}
++	$efc_ok( 30 === count( U::normalize( $efc_many ) ), 'at most 30 pairs per report' );
++	$efc_ok(
++		U::normalize( array( 'efs-a:correct' => 2, 'efs-a:finished' => 1 ) ) == array( 'efs-a' => array( 'correct' => 2, 'visit' => 1, 'finished' => 1 ) ),
++		'one visit per source, however many kinds'
++	);
++
++	echo "{$efc_count} assertions OK\n";
++}
