@@ -3,7 +3,7 @@ Contributors: englishfinders
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.19.1
+Stable tag: 0.20.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,6 +26,11 @@ My Level, the mistake notebook, the daily goal, the opt-in weekly leaderboard an
 English Finders Core 1.7.4 or later, declared via `Requires Plugins` — a hard dependency, since login/registration cannot function without it. Word Games Pro 2.12.12 or later is a soft dependency: when it's active and new enough, the My Library section (0.5.0) shows saved words and recent searches through its `Support\Api` facade; when it isn't, that section is simply absent, the same degrade-gracefully pattern used for Core's own optional services. This started as a phase-A1 plugin with no dependency on Core; Phase A5 (billing UI) first added a real one — EntitlementRepository, PaddlePortalClient, TransactionLog — Phase A3's Progress section (0.4.0) raised the Core minimum to 1.7.0 for the `activity` service, and 0.6.0's badge progress bars raised it again to 1.7.4 for `BadgeCatalog::thresholds()`.
 
 == Changelog ==
+
+= 0.20.0 =
+* First steps after sign-up: account -> level test -> course. A new learner who signed up from a particular page (a lesson, quiz, tool or article) goes back to it as before, now with a one-time welcome banner pointing to the level test. A learner with no return address and no level result goes straight to the English Level Test, where the banner says to start there. Teachers, and learners whose anonymous test result was just attached to the new account, go to My Account, whose Home card already names the course to start. The same applies to new accounts created with Google sign-in. New Pages\WelcomeNote; filters efa_after_signup_url and efa_welcome_note_enabled.
+* The banner is driven by the efa_welcome query parameter, so it appears on that one page view only. It is shown only to a signed-in learner who still has no level result, and that response is never cached (nocache headers + LiteSpeed no-cache).
+* LevelController::test_page_url() is now public and static, so the welcome banner and My Level share one level-test URL (filter efa_level_test_url, as before).
 
 = 0.19.1 =
 * My Account's daily-goal hint now matches English Finders Core 1.14.0's XP rules: "1 XP per correct answer in practice, quizzes and games, 5 per solved puzzle, 20 per lesson." (was "1 XP per correct practice answer, 10 per game, 20 per lesson."). Text only; with Core 1.14.0 the Progress section's streak also reads 0 once it has lapsed, with no change needed here.

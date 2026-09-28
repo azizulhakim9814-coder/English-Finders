@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace EnglishFindersAccount\Auth;
 
+use EnglishFindersAccount\Pages\WelcomeNote;
 use EnglishFindersAccount\Profile\AccountType;
 use EnglishFindersAccount\Profile\Avatar;
 use EnglishFindersAccount\Profile\FullName;
@@ -161,8 +162,8 @@ final class RegistrationHandler {
 		 */
 
 		// 0.12.0: back to the lesson/quiz the learner came from, if any.
-		$return = LoginHandler::posted_return();
-		wp_safe_redirect( '' !== $return ? $return : Urls::my_account() );
+		// 0.20.0: otherwise the level test for a new learner; see WelcomeNote.
+		wp_safe_redirect( WelcomeNote::first_url( (int) $user_id, LoginHandler::posted_return() ) );
 		exit;
 	}
 

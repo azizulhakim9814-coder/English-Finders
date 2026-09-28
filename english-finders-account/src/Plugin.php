@@ -32,6 +32,7 @@ use EnglishFindersAccount\Mistakes\ResolveMistakeHandler;
 use EnglishFindersAccount\Pages\AuthPages;
 use EnglishFindersAccount\Pages\GuestNudge;
 use EnglishFindersAccount\Pages\MyAccountController;
+use EnglishFindersAccount\Pages\WelcomeNote;
 use EnglishFindersAccount\Privacy\PrivacyIntegration;
 use EnglishFindersAccount\Profile\ProfileRepository;
 use EnglishFindersAccount\Profile\ProfileSaveHandler;
@@ -97,6 +98,7 @@ final class Plugin {
 		( new Toolbar() )->register_hooks();
 		( new AuthPages() )->register_hooks();
 		( new GuestNudge() )->register_hooks();
+		( new WelcomeNote() )->register_hooks();
 		( new CertificatePage() )->register_hooks();
 		( new MyAccountController() )->register_hooks();
 

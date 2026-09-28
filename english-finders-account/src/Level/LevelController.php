@@ -109,6 +109,11 @@ final class LevelController {
 	 * -- a link to a 404 would be worse than no link.
 	 */
 	private function test_url(): string {
+		return self::test_page_url();
+	}
+
+	/** The same URL for callers outside My Level -- the sign-up welcome (0.20.0). */
+	public static function test_page_url(): string {
 		$page = get_page_by_path( self::TEST_PAGE_SLUG );
 		$url  = ( $page instanceof \WP_Post && 'publish' === $page->post_status ) ? (string) get_permalink( $page ) : '';
 

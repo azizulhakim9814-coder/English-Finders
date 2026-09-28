@@ -3,7 +3,7 @@
  * Plugin Name:       English Finders Account
  * Plugin URI:        https://englishfinders.com
  * Description:       Registration, login, profile, privacy and billing UI for English Finders. Replaces the broken /my-account/ page. Streak, XP, and the full My Account UI land in later phases.
- * Version:           0.19.1
+ * Version:           0.20.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * Requires Plugins:  english-finders-core
@@ -33,7 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * the EFC_VERSION / EFC_DB_VERSION split in English Finders Core, once
  * there is a second version to split.
  */
-define( 'EFA_VERSION', '0.19.1' );
+define( 'EFA_VERSION', '0.20.0' );
 define( 'EFA_FILE', __FILE__ );
 define( 'EFA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'EFA_URL', plugin_dir_url( __FILE__ ) );

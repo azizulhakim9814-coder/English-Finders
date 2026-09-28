@@ -34,6 +34,7 @@ declare(strict_types=1);
 
 namespace EnglishFindersAccount\Auth;
 
+use EnglishFindersAccount\Pages\WelcomeNote;
 use EnglishFindersAccount\Profile\AccountType;
 use EnglishFindersAccount\Profile\Avatar;
 use EnglishFindersAccount\Profile\FullName;
@@ -60,6 +61,9 @@ final class GoogleLogin {
 	private const ISSUERS        = array( 'https://accounts.google.com', 'accounts.google.com' );
 	private const STATE_COOKIE   = 'efa_google_state';
 	private const STATE_TTL      = 600;
+
+	/** Set by create_user(): this sign-in made a new account (0.20.0, for the first-steps redirect). */
+	private bool $created = false;
 
 	public function register_hooks(): void {
 		add_action( 'admin_post_nopriv_' . self::START_ACTION, array( $this, 'start' ) );
@@ -191,7 +195,9 @@ final class GoogleLogin {
 		do_action( 'wp_login', $user->user_login, $user ); // Same signal a password login gives other plugins.
 
 		$return = (string) $saved['return'];
-		wp_safe_redirect( '' !== $return ? $return : Urls::my_account() );
+		// 0.20.0: a brand-new account gets the same first steps as the sign-up form (see WelcomeNote).
+		$target = $this->created ? WelcomeNote::first_url( $user_id, $return ) : ( '' !== $return ? $return : Urls::my_account() );
+		wp_safe_redirect( $target );
 		exit;
 	}
 
@@ -269,6 +275,8 @@ final class GoogleLogin {
 		if ( ! empty( $claims['picture'] ) ) {
 			Avatar::remember_remote( $user_id, (string) $claims['picture'] );
 		}
+
+		$this->created = true;
 
 		return (int) $user_id;
 	}
