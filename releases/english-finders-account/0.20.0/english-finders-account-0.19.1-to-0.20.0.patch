@@ -1,0 +1,300 @@
+diff --git a/english-finders-account/english-finders-account.php b/english-finders-account/english-finders-account.php
+index df52f32..1ff6d5e 100644
+--- a/english-finders-account/english-finders-account.php
++++ b/english-finders-account/english-finders-account.php
+@@ -3,7 +3,7 @@
+  * Plugin Name:       English Finders Account
+  * Plugin URI:        https://englishfinders.com
+  * Description:       Registration, login, profile, privacy and billing UI for English Finders. Replaces the broken /my-account/ page. Streak, XP, and the full My Account UI land in later phases.
+- * Version:           0.19.1
++ * Version:           0.20.0
+  * Requires at least: 6.6
+  * Requires PHP:      8.1
+  * Requires Plugins:  english-finders-core
+@@ -33,7 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
+  * the EFC_VERSION / EFC_DB_VERSION split in English Finders Core, once
+  * there is a second version to split.
+  */
+-define( 'EFA_VERSION', '0.19.1' );
++define( 'EFA_VERSION', '0.20.0' );
+ define( 'EFA_FILE', __FILE__ );
+ define( 'EFA_PATH', plugin_dir_path( __FILE__ ) );
+ define( 'EFA_URL', plugin_dir_url( __FILE__ ) );
+diff --git a/english-finders-account/readme.txt b/english-finders-account/readme.txt
+index bd611a3..91ff180 100644
+--- a/english-finders-account/readme.txt
++++ b/english-finders-account/readme.txt
+@@ -3,7 +3,7 @@ Contributors: englishfinders
+ Requires at least: 6.6
+ Tested up to: 6.9
+ Requires PHP: 8.1
+-Stable tag: 0.19.1
++Stable tag: 0.20.0
+ License: GPL-2.0-or-later
+ License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ 
+@@ -27,6 +27,11 @@ English Finders Core 1.7.4 or later, declared via `Requires Plugins` — a hard
+ 
+ == Changelog ==
+ 
++= 0.20.0 =
++* First steps after sign-up: account -> level test -> course. A new learner who signed up from a particular page (a lesson, quiz, tool or article) goes back to it as before, now with a one-time welcome banner pointing to the level test. A learner with no return address and no level result goes straight to the English Level Test, where the banner says to start there. Teachers, and learners whose anonymous test result was just attached to the new account, go to My Account, whose Home card already names the course to start. The same applies to new accounts created with Google sign-in. New Pages\WelcomeNote; filters efa_after_signup_url and efa_welcome_note_enabled.
++* The banner is driven by the efa_welcome query parameter, so it appears on that one page view only. It is shown only to a signed-in learner who still has no level result, and that response is never cached (nocache headers + LiteSpeed no-cache).
++* LevelController::test_page_url() is now public and static, so the welcome banner and My Level share one level-test URL (filter efa_level_test_url, as before).
++
+ = 0.19.1 =
+ * My Account's daily-goal hint now matches English Finders Core 1.14.0's XP rules: "1 XP per correct answer in practice, quizzes and games, 5 per solved puzzle, 20 per lesson." (was "1 XP per correct practice answer, 10 per game, 20 per lesson."). Text only; with Core 1.14.0 the Progress section's streak also reads 0 once it has lapsed, with no change needed here.
+ 
+diff --git a/english-finders-account/src/Auth/GoogleLogin.php b/english-finders-account/src/Auth/GoogleLogin.php
+index a202018..71b4df4 100644
+--- a/english-finders-account/src/Auth/GoogleLogin.php
++++ b/english-finders-account/src/Auth/GoogleLogin.php
+@@ -34,6 +34,7 @@ declare(strict_types=1);
+ 
+ namespace EnglishFindersAccount\Auth;
+ 
++use EnglishFindersAccount\Pages\WelcomeNote;
+ use EnglishFindersAccount\Profile\AccountType;
+ use EnglishFindersAccount\Profile\Avatar;
+ use EnglishFindersAccount\Profile\FullName;
+@@ -61,6 +62,9 @@ final class GoogleLogin {
+ 	private const STATE_COOKIE   = 'efa_google_state';
+ 	private const STATE_TTL      = 600;
+ 
++	/** Set by create_user(): this sign-in made a new account (0.20.0, for the first-steps redirect). */
++	private bool $created = false;
++
+ 	public function register_hooks(): void {
+ 		add_action( 'admin_post_nopriv_' . self::START_ACTION, array( $this, 'start' ) );
+ 		add_action( 'admin_post_' . self::START_ACTION, array( $this, 'already_logged_in' ) );
+@@ -191,7 +195,9 @@ final class GoogleLogin {
+ 		do_action( 'wp_login', $user->user_login, $user ); // Same signal a password login gives other plugins.
+ 
+ 		$return = (string) $saved['return'];
+-		wp_safe_redirect( '' !== $return ? $return : Urls::my_account() );
++		// 0.20.0: a brand-new account gets the same first steps as the sign-up form (see WelcomeNote).
++		$target = $this->created ? WelcomeNote::first_url( $user_id, $return ) : ( '' !== $return ? $return : Urls::my_account() );
++		wp_safe_redirect( $target );
+ 		exit;
+ 	}
+ 
+@@ -270,6 +276,8 @@ final class GoogleLogin {
+ 			Avatar::remember_remote( $user_id, (string) $claims['picture'] );
+ 		}
+ 
++		$this->created = true;
++
+ 		return (int) $user_id;
+ 	}
+ 
+diff --git a/english-finders-account/src/Auth/RegistrationHandler.php b/english-finders-account/src/Auth/RegistrationHandler.php
+index b93eac4..490e907 100644
+--- a/english-finders-account/src/Auth/RegistrationHandler.php
++++ b/english-finders-account/src/Auth/RegistrationHandler.php
+@@ -13,6 +13,7 @@ declare(strict_types=1);
+ 
+ namespace EnglishFindersAccount\Auth;
+ 
++use EnglishFindersAccount\Pages\WelcomeNote;
+ use EnglishFindersAccount\Profile\AccountType;
+ use EnglishFindersAccount\Profile\Avatar;
+ use EnglishFindersAccount\Profile\FullName;
+@@ -161,8 +162,8 @@ final class RegistrationHandler {
+ 		 */
+ 
+ 		// 0.12.0: back to the lesson/quiz the learner came from, if any.
+-		$return = LoginHandler::posted_return();
+-		wp_safe_redirect( '' !== $return ? $return : Urls::my_account() );
++		// 0.20.0: otherwise the level test for a new learner; see WelcomeNote.
++		wp_safe_redirect( WelcomeNote::first_url( (int) $user_id, LoginHandler::posted_return() ) );
+ 		exit;
+ 	}
+ 
+diff --git a/english-finders-account/src/Level/LevelController.php b/english-finders-account/src/Level/LevelController.php
+index cfb673f..efbfe11 100644
+--- a/english-finders-account/src/Level/LevelController.php
++++ b/english-finders-account/src/Level/LevelController.php
+@@ -109,6 +109,11 @@ final class LevelController {
+ 	 * -- a link to a 404 would be worse than no link.
+ 	 */
+ 	private function test_url(): string {
++		return self::test_page_url();
++	}
++
++	/** The same URL for callers outside My Level -- the sign-up welcome (0.20.0). */
++	public static function test_page_url(): string {
+ 		$page = get_page_by_path( self::TEST_PAGE_SLUG );
+ 		$url  = ( $page instanceof \WP_Post && 'publish' === $page->post_status ) ? (string) get_permalink( $page ) : '';
+ 
+diff --git a/english-finders-account/src/Pages/WelcomeNote.php b/english-finders-account/src/Pages/WelcomeNote.php
+new file mode 100644
+index 0000000..a1259f9
+--- /dev/null
++++ b/english-finders-account/src/Pages/WelcomeNote.php
+@@ -0,0 +1,146 @@
++<?php
++/**
++ * First steps after sign-up (0.20.0): account -> level test -> course.
++ *
++ * Found live 2026-09-28: sign-ups had nowhere in particular to go. Most
++ * came back to the page they signed up from (the header links and the
++ * "keep your progress" bar carry a return address) and were never told
++ * about the level test, which is what picks their course -- only 3 real
++ * learners had ever taken it.
++ *
++ * Where a new account goes is decided by first_url():
++ *
++ *  - a return address (the lesson, quiz or page they signed up from)
++ *    always wins: the learner is sent back to it, with the welcome banner;
++ *  - otherwise a learner without a level result goes straight to the level
++ *    test, with the welcome banner;
++ *  - teachers, and learners whose anonymous result was just attached to
++ *    the new account (English Finders Study claims it on user_register),
++ *    go to My Account, whose Home card already names the course to start.
++ *
++ * The banner is shown on that one page view only -- it is driven by a
++ * query parameter, not stored state -- and only to a signed-in learner who
++ * still has no level result. That response is never cached.
++ *
++ * Filters: efa_after_signup_url (string $url, int $user_id, string $return),
++ * efa_welcome_note_enabled (bool, int $user_id).
++ *
++ * @package EnglishFindersAccount
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersAccount\Pages;
++
++use EnglishFindersAccount\Level\LevelController;
++use EnglishFindersAccount\Profile\AccountType;
++use EnglishFindersAccount\Profile\ProfileRepository;
++use EnglishFindersAccount\Support\Urls;
++use EnglishFindersCore\Support\Api;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class WelcomeNote {
++	/** Query parameter that asks for the banner on the first page after sign-up. */
++	public const PARAM = 'efa_welcome';
++
++	public function register_hooks(): void {
++		add_action( 'wp', array( $this, 'prevent_caching' ) );
++		add_action( 'wp_body_open', array( $this, 'render' ) );
++	}
++
++	/**
++	 * The first page a brand-new account is sent to. See the class docblock.
++	 *
++	 * @param int    $user_id The new account.
++	 * @param string $return  The posted return address, if any (validated here).
++	 */
++	public static function first_url( int $user_id, string $return ): string {
++		$return    = Urls::return_target( $return );
++		$test_page = LevelController::test_page_url();
++
++		if ( '' !== $return ) {
++			$url = self::is_learner_without_result( $user_id ) ? add_query_arg( self::PARAM, '1', $return ) : $return;
++		} elseif ( '' !== $test_page && self::is_learner_without_result( $user_id ) ) {
++			$url = add_query_arg( self::PARAM, '1', $test_page );
++		} else {
++			$url = Urls::my_account();
++		}
++
++		/**
++		 * Filter where a new account goes straight after sign-up.
++		 *
++		 * @param string $url     Chosen address.
++		 * @param int    $user_id The new account.
++		 * @param string $return  The validated return address, or ''.
++		 */
++		return (string) apply_filters( 'efa_after_signup_url', $url, $user_id, $return );
++	}
++
++	/** A learner account (not a teacher) with no English Level Test result yet. */
++	public static function is_learner_without_result( int $user_id ): bool {
++		if ( $user_id <= 0 || AccountType::TEACHER === ( new ProfileRepository() )->get( $user_id, 'account_type' ) ) {
++			return false;
++		}
++
++		if ( ! class_exists( '\\EnglishFindersCore\\Support\\Api' ) ) {
++			return false;
++		}
++
++		$results = Api::service( 'level_results' );
++
++		return $results instanceof \EnglishFindersCore\Assessment\LevelResultRepository && null === $results->latest_for_user( $user_id );
++	}
++
++	/** Whether this request should carry the banner. */
++	private static function wanted(): bool {
++		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- display flag only; nothing is changed.
++		if ( is_admin() || ! isset( $_GET[ self::PARAM ] ) || ! is_user_logged_in() ) {
++			return false;
++		}
++
++		$user_id = get_current_user_id();
++
++		return (bool) apply_filters( 'efa_welcome_note_enabled', self::is_learner_without_result( $user_id ), $user_id );
++	}
++
++	/** The banner carries the learner's name, so that one response is never stored. */
++	public function prevent_caching(): void {
++		if ( ! self::wanted() ) {
++			return;
++		}
++
++		nocache_headers();
++		do_action( 'litespeed_control_set_nocache', 'english finders welcome note: personalised' );
++	}
++
++	public function render(): void {
++		if ( ! self::wanted() ) {
++			return;
++		}
++
++		$user     = wp_get_current_user();
++		$first    = trim( (string) $user->first_name );
++		$name     = '' !== $first ? $first : (string) $user->display_name;
++		$test_url = LevelController::test_page_url();
++		$on_test  = '' !== $test_url && is_page( LevelController::TEST_PAGE_SLUG );
++		?>
++		<div class="efa-welcome-note" role="status" style="background:#eef6ee;border-bottom:1px solid #b7d8b9;color:#1d3b20;padding:12px 16px;text-align:center;font-size:15px;line-height:1.5">
++			<strong>
++				<?php
++				/* translators: %s: the learner's first name */
++				echo esc_html( sprintf( __( 'Welcome, %s! Your free account is ready.', 'english-finders-account' ), $name ) );
++				?>
++			</strong>
++			<?php if ( $on_test ) : ?>
++				<?php esc_html_e( 'Start with the short level test below: it finds your CEFR level (A1 to C2) and shows which course to begin with.', 'english-finders-account' ); ?>
++			<?php elseif ( '' !== $test_url ) : ?>
++				<?php esc_html_e( 'Next step: take the short level test to find your CEFR level (A1 to C2) and the course to begin with.', 'english-finders-account' ); ?>
++				<a href="<?php echo esc_url( $test_url ); ?>" style="color:inherit;font-weight:600;text-decoration:underline"><?php esc_html_e( 'Take the level test', 'english-finders-account' ); ?> &rarr;</a>
++			<?php endif; ?>
++		</div>
++		<?php
++	}
++}
+diff --git a/english-finders-account/src/Plugin.php b/english-finders-account/src/Plugin.php
+index 5eee225..33935c8 100644
+--- a/english-finders-account/src/Plugin.php
++++ b/english-finders-account/src/Plugin.php
+@@ -32,6 +32,7 @@ use EnglishFindersAccount\Mistakes\ResolveMistakeHandler;
+ use EnglishFindersAccount\Pages\AuthPages;
+ use EnglishFindersAccount\Pages\GuestNudge;
+ use EnglishFindersAccount\Pages\MyAccountController;
++use EnglishFindersAccount\Pages\WelcomeNote;
+ use EnglishFindersAccount\Privacy\PrivacyIntegration;
+ use EnglishFindersAccount\Profile\ProfileRepository;
+ use EnglishFindersAccount\Profile\ProfileSaveHandler;
+@@ -97,6 +98,7 @@ final class Plugin {
+ 		( new Toolbar() )->register_hooks();
+ 		( new AuthPages() )->register_hooks();
+ 		( new GuestNudge() )->register_hooks();
++		( new WelcomeNote() )->register_hooks();
+ 		( new CertificatePage() )->register_hooks();
+ 		( new MyAccountController() )->register_hooks();
+ 

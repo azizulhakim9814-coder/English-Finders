@@ -168,6 +168,8 @@ final class SettingsPage {
 					</tr>
 				</table>
 
+				<?php $this->render_ai_fields( $settings, $has_key ); ?>
+
 				<?php submit_button( __( 'Save settings', 'english-finders-core' ) ); ?>
 			</form>
 
@@ -238,6 +240,101 @@ final class SettingsPage {
 		<?php
 	}
 
+	/**
+	 * AI feature settings and today's usage (1.16.0).
+	 *
+	 * @param array<string,mixed> $settings Stored settings.
+	 * @param bool                $has_key  Whether an OpenRouter key is available.
+	 */
+	private function render_ai_fields( array $settings, bool $has_key ): void {
+		$ai    = Api::service( 'ai' );
+		$quota = $ai instanceof \EnglishFindersCore\Ai\AiService ? $ai->quota() : null;
+		?>
+		<h2><?php esc_html_e( 'AI features', 'english-finders-core' ); ?></h2>
+		<p class="description" style="max-width:46em">
+			<?php esc_html_e( 'Powers AI writing feedback in English Finders Study. Each check is one paid request to the model below, using the same OpenRouter key as speech. Signed-in learners get a small free allowance each day and Pro members a larger one; the site-wide cap stops all AI requests for the rest of the day once it is reached.', 'english-finders-core' ); ?>
+		</p>
+
+		<?php if ( ! empty( $settings['ai_enabled'] ) && ! $has_key ) : ?>
+			<div class="notice notice-warning inline"><p><?php esc_html_e( 'AI features are switched on, but no API key is set, so nothing will run.', 'english-finders-core' ); ?></p></div>
+		<?php endif; ?>
+
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><?php esc_html_e( 'AI writing feedback', 'english-finders-core' ); ?></th>
+				<td>
+					<label>
+						<input type="checkbox" name="ai_enabled" value="1" <?php checked( ! empty( $settings['ai_enabled'] ) ); ?>>
+						<?php esc_html_e( 'Allow AI requests', 'english-finders-core' ); ?>
+					</label>
+					<p class="description"><?php esc_html_e( 'Off by default. Turning this on allows the site to make paid requests to the AI provider.', 'english-finders-core' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="efc-ai-model"><?php esc_html_e( 'AI model', 'english-finders-core' ); ?></label></th>
+				<td>
+					<input type="text" id="efc-ai-model" name="ai_model" class="regular-text" value="<?php echo esc_attr( (string) ( $settings['ai_model'] ?? \EnglishFindersCore\Ai\OpenRouterTextClient::DEFAULT_MODEL ) ); ?>">
+					<p class="description"><?php esc_html_e( 'An OpenRouter model identifier. The default, anthropic/claude-haiku-4.5, costs about half a US cent per writing check.', 'english-finders-core' ); ?></p>
+				</td>
+			</tr>
+			<?php
+			$fields = array(
+				'ai_free_daily'     => array( __( 'Free checks per day', 'english-finders-core' ), \EnglishFindersCore\Ai\AiQuota::DEFAULT_FREE_DAILY, __( 'For each signed-in learner without Pro.', 'english-finders-core' ) ),
+				'ai_pro_daily'      => array( __( 'Pro checks per day', 'english-finders-core' ), \EnglishFindersCore\Ai\AiQuota::DEFAULT_PRO_DAILY, __( 'For each Pro member.', 'english-finders-core' ) ),
+				'ai_site_daily_cap' => array( __( 'Site-wide daily cap', 'english-finders-core' ), \EnglishFindersCore\Ai\AiQuota::DEFAULT_SITE_CAP, __( 'All AI requests on the site in one day, whoever makes them.', 'english-finders-core' ) ),
+			);
+			foreach ( $fields as $field => $meta ) :
+				?>
+				<tr>
+					<th scope="row"><label for="efc-<?php echo esc_attr( $field ); ?>"><?php echo esc_html( $meta[0] ); ?></label></th>
+					<td>
+						<input type="number" min="0" max="10000" step="1" id="efc-<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) (int) ( $settings[ $field ] ?? $meta[1] ) ); ?>" style="width:7em">
+						<p class="description"><?php echo esc_html( $meta[2] ); ?></p>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+		</table>
+
+		<?php if ( null !== $quota ) : ?>
+			<p>
+				<?php
+				printf(
+					/* translators: 1: requests today, 2: daily cap */
+					esc_html__( 'Today: %1$s of %2$s AI requests used.', 'english-finders-core' ),
+					esc_html( number_format_i18n( $quota->site_used_today() ) ),
+					esc_html( number_format_i18n( $quota->site_cap() ) )
+				);
+				?>
+			</p>
+			<?php $usage = array_slice( $ai->usage(), 0, 7, true ); ?>
+			<?php if ( ! empty( $usage ) ) : ?>
+				<table class="widefat striped" style="max-width:46em;margin-bottom:1em">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Day', 'english-finders-core' ); ?></th>
+							<th><?php esc_html_e( 'Requests', 'english-finders-core' ); ?></th>
+							<th><?php esc_html_e( 'Failed', 'english-finders-core' ); ?></th>
+							<th><?php esc_html_e( 'Input tokens', 'english-finders-core' ); ?></th>
+							<th><?php esc_html_e( 'Output tokens', 'english-finders-core' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $usage as $day => $row ) : ?>
+						<tr>
+							<td><?php echo esc_html( (string) $day ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( (int) $row['requests'] ) ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( (int) $row['failed'] ) ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( (int) $row['prompt_tokens'] ) ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( (int) $row['completion_tokens'] ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		<?php endif; ?>
+		<?php
+	}
+
 	public function handle_save(): void {
 		if ( ! current_user_can( self::CAPABILITY ) ) {
 			wp_die( esc_html__( 'You do not have permission to do this.', 'english-finders-core' ) );
@@ -274,6 +371,21 @@ final class SettingsPage {
 			if ( '' !== $key ) {
 				$settings['openrouter_key'] = $key;
 			}
+		}
+
+		// 1.16.0: AI features.
+		$settings['ai_enabled'] = ! empty( $_POST['ai_enabled'] );
+
+		$ai_model = isset( $_POST['ai_model'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['ai_model'] ) ) ) : '';
+		$ai_model = (string) preg_replace( '/[^A-Za-z0-9_\-:.\/]/', '', $ai_model );
+		$settings['ai_model'] = '' !== $ai_model ? $ai_model : \EnglishFindersCore\Ai\OpenRouterTextClient::DEFAULT_MODEL;
+
+		foreach ( array(
+			'ai_free_daily'     => \EnglishFindersCore\Ai\AiQuota::DEFAULT_FREE_DAILY,
+			'ai_pro_daily'      => \EnglishFindersCore\Ai\AiQuota::DEFAULT_PRO_DAILY,
+			'ai_site_daily_cap' => \EnglishFindersCore\Ai\AiQuota::DEFAULT_SITE_CAP,
+		) as $field => $default ) {
+			$settings[ $field ] = isset( $_POST[ $field ] ) ? min( 10000, absint( wp_unslash( $_POST[ $field ] ) ) ) : $default;
 		}
 
 		update_option( self::OPTION, $settings, false );

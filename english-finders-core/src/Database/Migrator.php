@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Migrator {
 	/** @return list<MigrationInterface> */
 	public function migrations(): array {
-		$migrations = array( new InitialMigration(), new AdoptSharedTablesMigration(), new CefrColumnsMigration(), new SenseCefrColumnsMigration(), new BillingTablesMigration(), new BillingEventsCustomerColumnMigration(), new ActivityTablesMigration(), new LevelResultsTableMigration(), new MistakesTableMigration(), new ActivityOccurredAtIndexMigration(), new CertificatesTableMigration() );
+		$migrations = array( new InitialMigration(), new AdoptSharedTablesMigration(), new CefrColumnsMigration(), new SenseCefrColumnsMigration(), new BillingTablesMigration(), new BillingEventsCustomerColumnMigration(), new ActivityTablesMigration(), new LevelResultsTableMigration(), new MistakesTableMigration(), new ActivityOccurredAtIndexMigration(), new CertificatesTableMigration(), new UsageTableMigration() );
 
 		/**
 		 * Filter the registered Core migrations.

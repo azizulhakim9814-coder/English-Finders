@@ -295,6 +295,21 @@ final class Schema {
 				UNIQUE KEY user_course (user_id,course_id),
 				UNIQUE KEY code (code)
 			) {$collate};",
+
+			/*
+			 * Per-tool usage counts (1.15.0). One row per site day, source
+			 * (e.g. efs-grammar-quiz) and kind (visit/correct/solved/finished),
+			 * holding a running total -- UsageRepository is the only writer.
+			 * Aggregate only: no user, IP or page column, by design.
+			 */
+			'usage_daily' => "CREATE TABLE {$prefix}usage_daily (
+				day date NOT NULL,
+				source varchar(48) NOT NULL,
+				kind varchar(16) NOT NULL,
+				count int(10) unsigned NOT NULL DEFAULT 0,
+				PRIMARY KEY  (day,source,kind),
+				KEY source_day (source,day)
+			) {$collate};",
 		);
 	}
 

@@ -10,7 +10,11 @@ declare(strict_types=1);
 namespace EnglishFindersCore;
 
 use EnglishFindersCore\Activity\ActivityRecorder;
+use EnglishFindersCore\Ai\AiQuota;
+use EnglishFindersCore\Ai\AiService;
+use EnglishFindersCore\Ai\OpenRouterTextClient;
 use EnglishFindersCore\Admin\SettingsPage;
+use EnglishFindersCore\Admin\UsagePage;
 use EnglishFindersCore\Assessment\LevelResultRepository;
 use EnglishFindersCore\Certificates\CertificateRepository;
 use EnglishFindersCore\Mistakes\MistakeRepository;
@@ -26,6 +30,8 @@ use EnglishFindersCore\Core\Cache;
 use EnglishFindersCore\Integrations\QsmIntegration;
 use EnglishFindersCore\Integrations\TutorIntegration;
 use EnglishFindersCore\Models\WordRepository;
+use EnglishFindersCore\Usage\UsageController;
+use EnglishFindersCore\Usage\UsageRepository;
 use EnglishFindersCore\Database\Installer;
 use EnglishFindersCore\Database\Migrator;
 
@@ -71,7 +77,14 @@ final class Plugin {
 		 */
 		if ( is_admin() ) {
 			( new SettingsPage() )->register();
+			( new UsagePage( $this->get( 'usage' ) ) )->register();
 		}
+
+		/*
+		 * Unconditional: the footer script is printed on public pages and the
+		 * REST route must exist on every request. 1.15.0.
+		 */
+		( new UsageController( $this->get( 'usage' ) ) )->register();
 
 		/*
 		 * Unconditional, unlike the settings screen above: Paddle posts to
@@ -193,6 +206,26 @@ final class Plugin {
 		 * on course completion; English Finders Account reads them.
 		 */
 		$this->singleton( 'certificates', static fn (): CertificateRepository => new CertificateRepository() );
+
+		/*
+		 * Per-tool usage counts (1.15.0), fed by UsageController from the
+		 * browser's ef:progress events. See UsageRepository's own docblock.
+		 */
+		$this->singleton( 'usage', static fn (): UsageRepository => new UsageRepository() );
+
+		/*
+		 * Paid text generation (1.16.0), first used by English Finders
+		 * Study's Writing Feedback tool. Off unless `ai_enabled` is set; the
+		 * quota asks the entitlements service who has Pro, since Pro users get
+		 * a larger daily allowance. See AiService's own docblock.
+		 */
+		$this->singleton(
+			'ai',
+			fn (): AiService => new AiService(
+				new OpenRouterTextClient(),
+				new AiQuota( fn ( int $user_id ): bool => $this->get( 'entitlements' )->for_user( $user_id )->unlocks_pro() )
+			)
+		);
 	}
 
 	/**

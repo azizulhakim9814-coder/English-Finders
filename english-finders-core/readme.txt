@@ -3,7 +3,7 @@ Contributors: englishfinders
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.14.0
+Stable tag: 1.16.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,6 +26,21 @@ Having one owner for the shared data prevents the two plugins from holding separ
 Core must be active before Word Games Pro or Learning Toolkit Pro can run. WordPress 6.5+ enforces this automatically via plugin dependencies.
 
 == Changelog ==
+
+= 1.16.0 =
+* Added: an `ai` service for paid text generation, first used by English Finders Study's AI Writing Feedback tool. It uses the existing OpenRouter key and a model chosen in settings (default anthropic/claude-haiku-4.5, about half a US cent per writing check).
+* Daily limits: each signed-in learner gets a small free allowance of AI checks per day (default 3), Pro members a larger one (default 30), and a site-wide daily cap (default 300) stops all AI requests for the rest of the day once reached. A request that fails at the provider is refunded.
+* Settings -> English Finders Core has a new "AI features" section: an on/off switch (off by default, so no paid calls happen until it is switched on), the model, the three limits, today's usage and a 7-day table of requests and tokens.
+* No database migration: limits are stored in user meta and two options.
+
+= 1.15.0 =
+* Added: usage counts for every practice tool and game, including visitors who are not signed in. A small inline footer script listens for the shared ef:progress browser event (already fired by English Finders Study tools and Word Games Pro games), adds it up while the page is open, and sends one report when the page is hidden or left (sendBeacon). One request per active page, not one per answer.
+* New REST route POST efc/v1/usage (no nonce, since pages are cached long-term). Reports are strictly validated: source must look like efs-* or wgp-*, the kind must be correct, solved or finished, counts are capped at 500, there can be at most 30 pairs per report, the body must be under 4 KB, and the Origin must be this site when present. The route only increments counters.
+* **Migration 1.15.0** (`EFC_DB_VERSION` 1.15.0) adds a `usage_daily` table with one row per site day, source and kind (plus a server-side `visit` per source per report). It stores aggregate counts only: no user ID, IP address, cookie or URL. Rolling back is allowed, since nothing in it belongs to a learner.
+* New `usage` service (UsageRepository): add(), totals( $days ), daily_visits( $days ).
+* New screen, Settings -> English Finders Usage, shows visits, correct answers, solved puzzles and finished rounds per tool for the last 7, 30 or 90 days, plus visits per day.
+* Google Analytics 4: when Site Kit's gtag is on the page, the same script also sends ef_engaged (once per tool per page), ef_solved and ef_finished, each with an ef_tool parameter. Individual correct answers are not sent to GA.
+* Filter efc_usage_tracking_enabled (bool) turns off both the script and the route.
 
 = 1.14.0 =
 * One XP currency: 1 XP per correct answer. Tutor LMS and QSM quizzes now credit quiz_answer_correct per correct answer (was a flat 15 XP per quiz); a quiz with no correct answers records nothing. New event types for Word Games Pro 2.12.15: game_answer_correct (1), game_solved (5), game_finished (1). Lessons (20) and courses (100) unchanged.
