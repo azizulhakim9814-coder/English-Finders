@@ -3,7 +3,7 @@
  * Plugin Name:       English Finders Study
  * Plugin URI:        https://englishfinders.com
  * Description:       Practice tools for English learners and teachers — vocabulary, grammar, reading, writing, spelling and pronunciation. Reads the shared dictionary from English Finders Core.
- * Version:           1.17.0
+ * Version:           1.18.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * Requires Plugins:  english-finders-core
@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * would run migration checks on every update for nothing. Mirrors the split in
  * Core and Word Games Pro.
  */
-define( 'EFS_VERSION', '1.17.0' );
+define( 'EFS_VERSION', '1.18.0' );
 define( 'EFS_DB_VERSION', '1.0.0' );
 
 /**

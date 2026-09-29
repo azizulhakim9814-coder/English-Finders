@@ -67,7 +67,18 @@ $plan_labels = array(
 		$efa_prices = $efa_offer['prices'];
 		$efa_labels = $efa_offer['labels'];
 		?>
-		<p class="efa-pro-pitch"><?php esc_html_e( 'Upgrade to Pro: no ads anywhere on English Finders, and 5 streak freezes topped up every month.', 'english-finders-account' ); ?></p>
+		<p class="efa-pro-pitch">
+			<?php
+			esc_html_e( 'Upgrade to Pro: no ads anywhere on English Finders, and 5 streak freezes topped up every month.', 'english-finders-account' );
+			// 0.21.0: AI writing checks, only while the feature is on.
+			$efa_ai = \EnglishFindersAccount\Membership\ProOffer::ai_allowances();
+			if ( null !== $efa_ai ) {
+				echo ' ';
+				/* translators: %s: number of checks */
+				echo esc_html( sprintf( _n( 'You also get %s AI writing check a day.', 'You also get %s AI writing checks a day.', $efa_ai['pro'], 'english-finders-account' ), number_format_i18n( $efa_ai['pro'] ) ) );
+			}
+			?>
+		</p>
 		<div class="efa-plan-upgrade-buttons">
 			<?php if ( '' !== $efa_prices['year'] ) : ?>
 				<button type="button" data-efa-price-id="<?php echo esc_attr( $efa_prices['year'] ); ?>">

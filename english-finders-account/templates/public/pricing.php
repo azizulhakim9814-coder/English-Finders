@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $efa_free = array(
 	__( 'All A1–C2 courses and lessons', 'english-finders-account' ),
-	__( '8 practice tools and every word game', 'english-finders-account' ),
+	__( '9 practice tools and every word game', 'english-finders-account' ),
 	__( 'The free level test and course certificates', 'english-finders-account' ),
 	__( 'XP, daily streaks and the weekly leaderboard', 'english-finders-account' ),
 	__( '2 streak freezes', 'english-finders-account' ),
@@ -34,6 +34,17 @@ $efa_pro = array(
 	__( '5 streak freezes, topped up every month', 'english-finders-account' ),
 	__( 'Supports new lessons, tools and games', 'english-finders-account' ),
 );
+
+// 0.21.0: AI writing checks, listed only while the feature is on.
+$efa_ai = \EnglishFindersAccount\Membership\ProOffer::ai_allowances();
+if ( null !== $efa_ai ) {
+	if ( $efa_ai['free'] > 0 ) {
+		/* translators: %s: number of checks */
+		array_splice( $efa_free, 2, 0, array( sprintf( _n( '%s AI writing check a day', '%s AI writing checks a day', $efa_ai['free'], 'english-finders-account' ), number_format_i18n( $efa_ai['free'] ) ) ) );
+	}
+	/* translators: %s: number of checks */
+	array_splice( $efa_pro, 2, 0, array( sprintf( _n( '%s AI writing check a day', '%s AI writing checks a day', $efa_ai['pro'], 'english-finders-account' ), number_format_i18n( $efa_ai['pro'] ) ) ) );
+}
 ?>
 <?php if ( $print_css ) : ?>
 <style id="efa-pricing-css" data-no-optimize="1">

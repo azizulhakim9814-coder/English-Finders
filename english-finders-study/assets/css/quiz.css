@@ -980,3 +980,91 @@
   .efs-level__actions { flex-direction: column; align-items: stretch; }
   .efs-level__actions > * { justify-content: center; }
 }
+
+/* 1.18.0: AI Writing Feedback. */
+.efs-writing__pickers { display: flex; flex-wrap: wrap; gap: 0 1.2rem; }
+.efs-writing__pickers .efs-quiz__level { margin-bottom: 0.8rem; }
+.efs-writing__pickers select { max-width: 100%; }
+
+.efs-quiz .efs-writing__task {
+  margin: 0.2rem 0 1rem;
+  padding: 0.8rem 1rem;
+  border-left: 4px solid #0b6cf0;
+  border-radius: 0.4rem;
+  background: #f2f7ff;
+  color: #15243a;
+  line-height: 1.5;
+}
+
+.efs-writing__label { display: block; margin-bottom: 0.35rem; font-weight: 700; color: #15243a; }
+
+.efs-writing__text {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 12rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #dbe6f2;
+  border-radius: 0.7rem;
+  background: #fff;
+  color: #15243a;
+  font: inherit;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.efs-writing__text:focus { border-color: #0b6cf0; outline: 0; box-shadow: 0 0 0 3px rgba(11, 108, 240, 0.13); }
+
+.efs-quiz .efs-writing__count { margin: 0.4rem 0 0; font-size: 0.85rem; color: #617187; }
+
+.efs-writing__actions { margin-top: 0.4rem; }
+.efs-writing__actions .efs-quiz__next:disabled { background: #9db8dd; cursor: not-allowed; }
+.efs-quiz .efs-writing__status { margin: 0.6rem 0 0; font-weight: 700; color: #526174; }
+.efs-quiz .efs-writing__privacy { margin: 0.6rem 0 0; font-size: 0.8rem; color: #617187; }
+.efs-writing.is-busy .efs-writing__status { color: #0b55bd; }
+
+.efs-writing__signin {
+  margin-top: 0.9rem;
+  padding: 1rem;
+  border: 1px solid #dbe6f2;
+  border-radius: 0.7rem;
+  background: #f7fafd;
+}
+
+.efs-quiz .efs-writing__signin p { margin: 0 0 0.6rem; color: #15243a; }
+.efs-writing__buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1rem; }
+.efs-writing__buttons .efs-quiz__next { margin-top: 0; }
+.efs-quiz a.efs-writing__link { display: inline-flex; align-items: center; text-decoration: none; }
+.efs-quiz a.efs-writing__link--plain { font-weight: 700; color: #0b55bd; }
+.efs-quiz a.efs-writing__link--plain:hover { text-decoration: underline; }
+.efs-quiz .efs-writing__hint { margin: 0.6rem 0 0; font-size: 0.82rem; color: #617187; }
+
+.efs-writing__result {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eef2f7;
+}
+
+.efs-quiz .efs-writing__estimate { margin: 0 0 0.5rem; color: #526174; font-weight: 700; }
+
+.efs-writing__estimate strong {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: #0b6cf0;
+  color: #fff;
+}
+
+.efs-quiz .efs-writing__summary { margin: 0 0 0.6rem; color: #15243a; line-height: 1.55; }
+.efs-quiz .efs-writing__heading { margin: 1.1rem 0 0.45rem; font-size: 1rem; font-weight: 800; color: #15243a; }
+.efs-writing__strengths, .efs-writing__corrections { margin: 0; padding-left: 1.3rem; }
+.efs-writing__strengths li, .efs-writing__corrections li { margin: 0 0 0.55rem; line-height: 1.5; color: #15243a; }
+.efs-quiz .efs-writing__change { margin: 0; overflow-wrap: anywhere; }
+.efs-writing__change del { color: #8f1f21; background: #fdeeee; text-decoration: line-through; padding: 0 0.2rem; border-radius: 0.25rem; }
+.efs-writing__change ins { color: #10603a; background: #eaf7f0; text-decoration: none; font-weight: 700; padding: 0 0.2rem; border-radius: 0.25rem; }
+.efs-quiz .efs-writing__why { margin: 0.15rem 0 0; font-size: 0.9rem; color: #526174; }
+.efs-quiz .efs-writing__next { margin: 0; padding: 0.7rem 0.9rem; border-radius: 0.5rem; background: #fff8e6; color: #5c4400; }
+
+.efs-writing__improved { margin-top: 1rem; border: 1px solid #dbe6f2; border-radius: 0.7rem; padding: 0.6rem 0.9rem; }
+.efs-writing__improved summary { cursor: pointer; font-weight: 700; color: #0b55bd; }
+.efs-quiz .efs-writing__improved p { margin: 0.6rem 0 0; line-height: 1.55; color: #15243a; }

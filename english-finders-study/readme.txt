@@ -3,7 +3,7 @@ Contributors: englishfinders
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 1.17.0
+Stable tag: 1.18.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,15 @@ Tools are organised by skill. "For teachers" and "Uses AI" are filters that cut 
 English Finders Core 1.4.0 or later must be installed and active. Study reads the shared dictionary, CEFR levels and provider connections from Core rather than holding its own copies.
 
 == Changelog ==
+
+= 1.18.0 =
+* New tool: AI Writing Feedback (shortcode [efs_writing_feedback], Writing category, tagged "Uses AI"). Learners pick a level (A1-C2) and one of 34 writing tasks (5 per level plus "My own topic"), write their text, and get teacher-style feedback: an estimated CEFR level, what went well, up to 8 corrections with a one-line reason each, how well the text fits the task, one thing to work on next, and a corrected version that keeps their own ideas.
+* Needs English Finders Core 1.16.0 (the new `ai` service) with AI features switched on in Settings -> English Finders. With an older Core, or AI switched off, the page shows the tasks and says feedback is not available; every other tool is unaffected.
+* Sign-in required for the check itself. Each account gets a daily allowance (3 a day free, 30 a day with Pro, set in Core's settings) and the site has a daily cap; a failed check is not counted. There is also a short burst limit (4 checks in 10 minutes). Guests can write a draft, which is kept in their browser so it survives signing in.
+* The page is safe to cache: the learner's state (signed in, checks left, a fresh nonce) comes from a separate uncached request, efs_writing_status.
+* The three main corrections of each check go into the learner's Mistakes notebook (skill: Writing), and each check counts as practice activity. The browser fires ef:progress {source: 'efs-writing-feedback', kind: 'finished'}.
+* The page tells learners their text is sent to the AI provider and asks them not to include private details. The text itself is not stored.
+* tests/test_writing_feedback.php: task bank, word counting and limits, and the checks on the AI answer.
 
 = 1.17.0 =
 * Blog posts in a CEFR level category (A1 ... C2) now lead into that level. The "Practice what you just read" box gains a "Written for B1 Intermediate learners" row linking the level's Learn hub (/learn/b1/) and its free course. Levelled posts that get no practice box (because they already link a practice tool, or no tool fits) show a compact level-only box instead. Posts without a level category are unchanged and keep the level-test link.

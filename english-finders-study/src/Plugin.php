@@ -79,6 +79,7 @@ final class Plugin {
 		$this->tools->register( new \EnglishFindersStudy\Tools\SentenceBuilder() );
 		$this->tools->register( new \EnglishFindersStudy\Tools\ErrorCorrection() );
 		$this->tools->register( new \EnglishFindersStudy\Tools\PronunciationPractice() );
+		$this->tools->register( new \EnglishFindersStudy\Tools\WritingFeedback() );
 
 		do_action( 'efs_register_tools', $this->tools );
 

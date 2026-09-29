@@ -52,6 +52,7 @@ final class MistakesController {
 		'reading-quiz'     => 'reading-quiz',
 		'sentence-builder' => 'sentence-builder',
 		'error-correction' => 'error-correction',
+		'writing-feedback' => 'writing-feedback',
 	);
 
 	/**
@@ -103,6 +104,7 @@ final class MistakesController {
 			'reading-quiz'     => __( 'Reading Quiz', 'english-finders-account' ),
 			'sentence-builder' => __( 'Sentence Builder', 'english-finders-account' ),
 			'error-correction' => __( 'Error Correction', 'english-finders-account' ),
+			'writing-feedback' => __( 'AI Writing Feedback', 'english-finders-account' ),
 		);
 
 		return $labels[ $tool ] ?? ucwords( str_replace( '-', ' ', $tool ) );

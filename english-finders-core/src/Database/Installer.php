@@ -90,6 +90,11 @@ final class Installer {
 			 */
 			'ai_provider'        => 'openrouter',
 			'ai_enabled'         => false,
+			// 1.16.0: AI writing feedback. Daily checks per user (free / Pro) and a site-wide daily cap on paid requests.
+			'ai_model'           => 'anthropic/claude-haiku-4.5',
+			'ai_free_daily'      => 3,
+			'ai_pro_daily'       => 30,
+			'ai_site_daily_cap'  => 300,
 			'tts_provider'       => 'openrouter',
 			/*
 			 * Off by default. Enabling it without a key does nothing, but an

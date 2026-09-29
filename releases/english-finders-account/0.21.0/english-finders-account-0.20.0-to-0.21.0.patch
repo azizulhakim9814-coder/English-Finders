@@ -1,0 +1,160 @@
+diff --git a/english-finders-account/english-finders-account.php b/english-finders-account/english-finders-account.php
+index 1ff6d5e..70f6793 100644
+--- a/english-finders-account/english-finders-account.php
++++ b/english-finders-account/english-finders-account.php
+@@ -3,7 +3,7 @@
+  * Plugin Name:       English Finders Account
+  * Plugin URI:        https://englishfinders.com
+  * Description:       Registration, login, profile, privacy and billing UI for English Finders. Replaces the broken /my-account/ page. Streak, XP, and the full My Account UI land in later phases.
+- * Version:           0.20.0
++ * Version:           0.21.0
+  * Requires at least: 6.6
+  * Requires PHP:      8.1
+  * Requires Plugins:  english-finders-core
+@@ -33,7 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
+  * the EFC_VERSION / EFC_DB_VERSION split in English Finders Core, once
+  * there is a second version to split.
+  */
+-define( 'EFA_VERSION', '0.20.0' );
++define( 'EFA_VERSION', '0.21.0' );
+ define( 'EFA_FILE', __FILE__ );
+ define( 'EFA_PATH', plugin_dir_path( __FILE__ ) );
+ define( 'EFA_URL', plugin_dir_url( __FILE__ ) );
+diff --git a/english-finders-account/readme.txt b/english-finders-account/readme.txt
+index 91ff180..7ebd98c 100644
+--- a/english-finders-account/readme.txt
++++ b/english-finders-account/readme.txt
+@@ -3,7 +3,7 @@ Contributors: englishfinders
+ Requires at least: 6.6
+ Tested up to: 6.9
+ Requires PHP: 8.1
+-Stable tag: 0.20.0
++Stable tag: 0.21.0
+ License: GPL-2.0-or-later
+ License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ 
+@@ -27,6 +27,11 @@ English Finders Core 1.7.4 or later, declared via `Requires Plugins` — a hard
+ 
+ == Changelog ==
+ 
++= 0.21.0 =
++* Pro now includes more AI writing checks. While AI feedback is switched on in English Finders Core (1.16.0 or later), the pricing page lists the daily AI writing checks on both plans (Free: 3 a day, Pro: 30 a day by default; the numbers come from Core's settings), and the Pro pitch in My Account mentions them. While AI is off, nothing about it is shown. New ProOffer::ai_allowances().
++* The Free plan now says "9 practice tools" (English Finders Study 1.18.0 adds AI Writing Feedback).
++* Mistakes notebook: corrections from AI Writing Feedback are labelled with the tool's name and link back to /writing-feedback/.
++
+ = 0.20.0 =
+ * First steps after sign-up: account -> level test -> course. A new learner who signed up from a particular page (a lesson, quiz, tool or article) goes back to it as before, now with a one-time welcome banner pointing to the level test. A learner with no return address and no level result goes straight to the English Level Test, where the banner says to start there. Teachers, and learners whose anonymous test result was just attached to the new account, go to My Account, whose Home card already names the course to start. The same applies to new accounts created with Google sign-in. New Pages\WelcomeNote; filters efa_after_signup_url and efa_welcome_note_enabled.
+ * The banner is driven by the efa_welcome query parameter, so it appears on that one page view only. It is shown only to a signed-in learner who still has no level result, and that response is never cached (nocache headers + LiteSpeed no-cache).
+diff --git a/english-finders-account/src/Membership/ProOffer.php b/english-finders-account/src/Membership/ProOffer.php
+index b38cb8d..f09d6ac 100644
+--- a/english-finders-account/src/Membership/ProOffer.php
++++ b/english-finders-account/src/Membership/ProOffer.php
+@@ -103,6 +103,33 @@ final class ProOffer {
+ 		return (bool) apply_filters( 'efa_pro_promo_enabled', self::on_sale() && '1' === (string) get_option( self::PROMO_OPTION, '0' ) );
+ 	}
+ 
++	/**
++	 * Daily AI writing checks for Free and Pro (0.21.0), or null while AI
++	 * feedback is unavailable (Core older than 1.16.0, or AI switched off in
++	 * Core's settings) -- so the plans never promise a feature that is off.
++	 * The numbers are Core's settings, not copy here, so they cannot drift.
++	 *
++	 * @return array{free:int,pro:int}|null
++	 */
++	public static function ai_allowances(): ?array {
++		if ( ! class_exists( '\\EnglishFindersCore\\Support\\Api' ) || ! Api::is_at_least( '1.16.0' ) ) {
++			return null;
++		}
++
++		$ai = Api::service( 'ai' );
++		if ( ! $ai instanceof \EnglishFindersCore\Ai\AiService || ! $ai->is_enabled() ) {
++			return null;
++		}
++
++		$free = $ai->quota()->daily_limit_for( false );
++		$pro  = $ai->quota()->daily_limit_for( true );
++
++		return $pro > 0 ? array(
++			'free' => $free,
++			'pro'  => $pro,
++		) : null;
++	}
++
+ 	/** EFC_PADDLE_WEBHOOK_SECRET in wp-config.php (or Core's setting). Never read out, only checked. */
+ 	public static function webhook_secret_set(): bool {
+ 		return ( defined( 'EFC_PADDLE_WEBHOOK_SECRET' ) && is_string( EFC_PADDLE_WEBHOOK_SECRET ) && '' !== EFC_PADDLE_WEBHOOK_SECRET )
+diff --git a/english-finders-account/src/Mistakes/MistakesController.php b/english-finders-account/src/Mistakes/MistakesController.php
+index 4da2775..d5e8cb8 100644
+--- a/english-finders-account/src/Mistakes/MistakesController.php
++++ b/english-finders-account/src/Mistakes/MistakesController.php
+@@ -52,6 +52,7 @@ final class MistakesController {
+ 		'reading-quiz'     => 'reading-quiz',
+ 		'sentence-builder' => 'sentence-builder',
+ 		'error-correction' => 'error-correction',
++		'writing-feedback' => 'writing-feedback',
+ 	);
+ 
+ 	/**
+@@ -103,6 +104,7 @@ final class MistakesController {
+ 			'reading-quiz'     => __( 'Reading Quiz', 'english-finders-account' ),
+ 			'sentence-builder' => __( 'Sentence Builder', 'english-finders-account' ),
+ 			'error-correction' => __( 'Error Correction', 'english-finders-account' ),
++			'writing-feedback' => __( 'AI Writing Feedback', 'english-finders-account' ),
+ 		);
+ 
+ 		return $labels[ $tool ] ?? ucwords( str_replace( '-', ' ', $tool ) );
+diff --git a/english-finders-account/templates/public/membership-section.php b/english-finders-account/templates/public/membership-section.php
+index d5b9f0d..3769b79 100644
+--- a/english-finders-account/templates/public/membership-section.php
++++ b/english-finders-account/templates/public/membership-section.php
+@@ -67,7 +67,18 @@ $plan_labels = array(
+ 		$efa_prices = $efa_offer['prices'];
+ 		$efa_labels = $efa_offer['labels'];
+ 		?>
+-		<p class="efa-pro-pitch"><?php esc_html_e( 'Upgrade to Pro: no ads anywhere on English Finders, and 5 streak freezes topped up every month.', 'english-finders-account' ); ?></p>
++		<p class="efa-pro-pitch">
++			<?php
++			esc_html_e( 'Upgrade to Pro: no ads anywhere on English Finders, and 5 streak freezes topped up every month.', 'english-finders-account' );
++			// 0.21.0: AI writing checks, only while the feature is on.
++			$efa_ai = \EnglishFindersAccount\Membership\ProOffer::ai_allowances();
++			if ( null !== $efa_ai ) {
++				echo ' ';
++				/* translators: %s: number of checks */
++				echo esc_html( sprintf( _n( 'You also get %s AI writing check a day.', 'You also get %s AI writing checks a day.', $efa_ai['pro'], 'english-finders-account' ), number_format_i18n( $efa_ai['pro'] ) ) );
++			}
++			?>
++		</p>
+ 		<div class="efa-plan-upgrade-buttons">
+ 			<?php if ( '' !== $efa_prices['year'] ) : ?>
+ 				<button type="button" data-efa-price-id="<?php echo esc_attr( $efa_prices['year'] ); ?>">
+diff --git a/english-finders-account/templates/public/pricing.php b/english-finders-account/templates/public/pricing.php
+index 9120474..231a1a8 100644
+--- a/english-finders-account/templates/public/pricing.php
++++ b/english-finders-account/templates/public/pricing.php
+@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
+ 
+ $efa_free = array(
+ 	__( 'All A1–C2 courses and lessons', 'english-finders-account' ),
+-	__( '8 practice tools and every word game', 'english-finders-account' ),
++	__( '9 practice tools and every word game', 'english-finders-account' ),
+ 	__( 'The free level test and course certificates', 'english-finders-account' ),
+ 	__( 'XP, daily streaks and the weekly leaderboard', 'english-finders-account' ),
+ 	__( '2 streak freezes', 'english-finders-account' ),
+@@ -34,6 +34,17 @@ $efa_pro = array(
+ 	__( '5 streak freezes, topped up every month', 'english-finders-account' ),
+ 	__( 'Supports new lessons, tools and games', 'english-finders-account' ),
+ );
++
++// 0.21.0: AI writing checks, listed only while the feature is on.
++$efa_ai = \EnglishFindersAccount\Membership\ProOffer::ai_allowances();
++if ( null !== $efa_ai ) {
++	if ( $efa_ai['free'] > 0 ) {
++		/* translators: %s: number of checks */
++		array_splice( $efa_free, 2, 0, array( sprintf( _n( '%s AI writing check a day', '%s AI writing checks a day', $efa_ai['free'], 'english-finders-account' ), number_format_i18n( $efa_ai['free'] ) ) ) );
++	}
++	/* translators: %s: number of checks */
++	array_splice( $efa_pro, 2, 0, array( sprintf( _n( '%s AI writing check a day', '%s AI writing checks a day', $efa_ai['pro'], 'english-finders-account' ), number_format_i18n( $efa_ai['pro'] ) ) ) );
++}
+ ?>
+ <?php if ( $print_css ) : ?>
+ <style id="efa-pricing-css" data-no-optimize="1">

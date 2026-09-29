@@ -3,7 +3,7 @@ Contributors: englishfinders
 Requires at least: 6.6
 Tested up to: 6.9
 Requires PHP: 8.1
-Stable tag: 0.20.0
+Stable tag: 0.21.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,6 +26,11 @@ My Level, the mistake notebook, the daily goal, the opt-in weekly leaderboard an
 English Finders Core 1.7.4 or later, declared via `Requires Plugins` — a hard dependency, since login/registration cannot function without it. Word Games Pro 2.12.12 or later is a soft dependency: when it's active and new enough, the My Library section (0.5.0) shows saved words and recent searches through its `Support\Api` facade; when it isn't, that section is simply absent, the same degrade-gracefully pattern used for Core's own optional services. This started as a phase-A1 plugin with no dependency on Core; Phase A5 (billing UI) first added a real one — EntitlementRepository, PaddlePortalClient, TransactionLog — Phase A3's Progress section (0.4.0) raised the Core minimum to 1.7.0 for the `activity` service, and 0.6.0's badge progress bars raised it again to 1.7.4 for `BadgeCatalog::thresholds()`.
 
 == Changelog ==
+
+= 0.21.0 =
+* Pro now includes more AI writing checks. While AI feedback is switched on in English Finders Core (1.16.0 or later), the pricing page lists the daily AI writing checks on both plans (Free: 3 a day, Pro: 30 a day by default; the numbers come from Core's settings), and the Pro pitch in My Account mentions them. While AI is off, nothing about it is shown. New ProOffer::ai_allowances().
+* The Free plan now says "9 practice tools" (English Finders Study 1.18.0 adds AI Writing Feedback).
+* Mistakes notebook: corrections from AI Writing Feedback are labelled with the tool's name and link back to /writing-feedback/.
 
 = 0.20.0 =
 * First steps after sign-up: account -> level test -> course. A new learner who signed up from a particular page (a lesson, quiz, tool or article) goes back to it as before, now with a one-time welcome banner pointing to the level test. A learner with no return address and no level result goes straight to the English Level Test, where the banner says to start there. Teachers, and learners whose anonymous test result was just attached to the new account, go to My Account, whose Home card already names the course to start. The same applies to new accounts created with Google sign-in. New Pages\WelcomeNote; filters efa_after_signup_url and efa_welcome_note_enabled.

@@ -1,0 +1,823 @@
+diff --git a/english-finders-core/english-finders-core.php b/english-finders-core/english-finders-core.php
+index b59eac2..f3161b7 100644
+--- a/english-finders-core/english-finders-core.php
++++ b/english-finders-core/english-finders-core.php
+@@ -3,7 +3,7 @@
+  * Plugin Name:       English Finders Core
+  * Plugin URI:        https://englishfinders.com
+  * Description:       Shared data layer and service foundation for the English Finders plugin suite. Owns the dictionary tables and provides word data, provider connections, and entitlement services to Word Games Pro and Learning Toolkit Pro.
+- * Version:           1.15.0
++ * Version:           1.16.0
+  * Requires at least: 6.6
+  * Requires PHP:      8.1
+  * Author:            English Finders
+@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
+  * This mirrors the WUC_VERSION / WUC_DB_VERSION split already used by
+  * Word Games Pro.
+  */
+-define( 'EFC_VERSION', '1.15.0' );
++define( 'EFC_VERSION', '1.16.0' );
+ define( 'EFC_DB_VERSION', '1.15.0' );
+ define( 'EFC_FILE', __FILE__ );
+ define( 'EFC_PATH', plugin_dir_path( __FILE__ ) );
+diff --git a/english-finders-core/readme.txt b/english-finders-core/readme.txt
+index 4de991c..0df9267 100644
+--- a/english-finders-core/readme.txt
++++ b/english-finders-core/readme.txt
+@@ -3,7 +3,7 @@ Contributors: englishfinders
+ Requires at least: 6.6
+ Tested up to: 6.9
+ Requires PHP: 8.1
+-Stable tag: 1.15.0
++Stable tag: 1.16.0
+ License: GPL-2.0-or-later
+ License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ 
+@@ -27,6 +27,12 @@ Core must be active before Word Games Pro or Learning Toolkit Pro can run. WordP
+ 
+ == Changelog ==
+ 
++= 1.16.0 =
++* Added: an `ai` service for paid text generation, first used by English Finders Study's AI Writing Feedback tool. It uses the existing OpenRouter key and a model chosen in settings (default anthropic/claude-haiku-4.5, about half a US cent per writing check).
++* Daily limits: each signed-in learner gets a small free allowance of AI checks per day (default 3), Pro members a larger one (default 30), and a site-wide daily cap (default 300) stops all AI requests for the rest of the day once reached. A request that fails at the provider is refunded.
++* Settings -> English Finders Core has a new "AI features" section: an on/off switch (off by default, so no paid calls happen until it is switched on), the model, the three limits, today's usage and a 7-day table of requests and tokens.
++* No database migration: limits are stored in user meta and two options.
++
+ = 1.15.0 =
+ * Added: usage counts for every practice tool and game, including visitors who are not signed in. A small inline footer script listens for the shared ef:progress browser event (already fired by English Finders Study tools and Word Games Pro games), adds it up while the page is open, and sends one report when the page is hidden or left (sendBeacon). One request per active page, not one per answer.
+ * New REST route POST efc/v1/usage (no nonce, since pages are cached long-term). Reports are strictly validated: source must look like efs-* or wgp-*, the kind must be correct, solved or finished, counts are capped at 500, there can be at most 30 pairs per report, the body must be under 4 KB, and the Origin must be this site when present. The route only increments counters.
+diff --git a/english-finders-core/src/Admin/SettingsPage.php b/english-finders-core/src/Admin/SettingsPage.php
+index 21eb837..e3d9994 100644
+--- a/english-finders-core/src/Admin/SettingsPage.php
++++ b/english-finders-core/src/Admin/SettingsPage.php
+@@ -168,6 +168,8 @@ final class SettingsPage {
+ 					</tr>
+ 				</table>
+ 
++				<?php $this->render_ai_fields( $settings, $has_key ); ?>
++
+ 				<?php submit_button( __( 'Save settings', 'english-finders-core' ) ); ?>
+ 			</form>
+ 
+@@ -238,6 +240,101 @@ final class SettingsPage {
+ 		<?php
+ 	}
+ 
++	/**
++	 * AI feature settings and today's usage (1.16.0).
++	 *
++	 * @param array<string,mixed> $settings Stored settings.
++	 * @param bool                $has_key  Whether an OpenRouter key is available.
++	 */
++	private function render_ai_fields( array $settings, bool $has_key ): void {
++		$ai    = Api::service( 'ai' );
++		$quota = $ai instanceof \EnglishFindersCore\Ai\AiService ? $ai->quota() : null;
++		?>
++		<h2><?php esc_html_e( 'AI features', 'english-finders-core' ); ?></h2>
++		<p class="description" style="max-width:46em">
++			<?php esc_html_e( 'Powers AI writing feedback in English Finders Study. Each check is one paid request to the model below, using the same OpenRouter key as speech. Signed-in learners get a small free allowance each day and Pro members a larger one; the site-wide cap stops all AI requests for the rest of the day once it is reached.', 'english-finders-core' ); ?>
++		</p>
++
++		<?php if ( ! empty( $settings['ai_enabled'] ) && ! $has_key ) : ?>
++			<div class="notice notice-warning inline"><p><?php esc_html_e( 'AI features are switched on, but no API key is set, so nothing will run.', 'english-finders-core' ); ?></p></div>
++		<?php endif; ?>
++
++		<table class="form-table" role="presentation">
++			<tr>
++				<th scope="row"><?php esc_html_e( 'AI writing feedback', 'english-finders-core' ); ?></th>
++				<td>
++					<label>
++						<input type="checkbox" name="ai_enabled" value="1" <?php checked( ! empty( $settings['ai_enabled'] ) ); ?>>
++						<?php esc_html_e( 'Allow AI requests', 'english-finders-core' ); ?>
++					</label>
++					<p class="description"><?php esc_html_e( 'Off by default. Turning this on allows the site to make paid requests to the AI provider.', 'english-finders-core' ); ?></p>
++				</td>
++			</tr>
++			<tr>
++				<th scope="row"><label for="efc-ai-model"><?php esc_html_e( 'AI model', 'english-finders-core' ); ?></label></th>
++				<td>
++					<input type="text" id="efc-ai-model" name="ai_model" class="regular-text" value="<?php echo esc_attr( (string) ( $settings['ai_model'] ?? \EnglishFindersCore\Ai\OpenRouterTextClient::DEFAULT_MODEL ) ); ?>">
++					<p class="description"><?php esc_html_e( 'An OpenRouter model identifier. The default, anthropic/claude-haiku-4.5, costs about half a US cent per writing check.', 'english-finders-core' ); ?></p>
++				</td>
++			</tr>
++			<?php
++			$fields = array(
++				'ai_free_daily'     => array( __( 'Free checks per day', 'english-finders-core' ), \EnglishFindersCore\Ai\AiQuota::DEFAULT_FREE_DAILY, __( 'For each signed-in learner without Pro.', 'english-finders-core' ) ),
++				'ai_pro_daily'      => array( __( 'Pro checks per day', 'english-finders-core' ), \EnglishFindersCore\Ai\AiQuota::DEFAULT_PRO_DAILY, __( 'For each Pro member.', 'english-finders-core' ) ),
++				'ai_site_daily_cap' => array( __( 'Site-wide daily cap', 'english-finders-core' ), \EnglishFindersCore\Ai\AiQuota::DEFAULT_SITE_CAP, __( 'All AI requests on the site in one day, whoever makes them.', 'english-finders-core' ) ),
++			);
++			foreach ( $fields as $field => $meta ) :
++				?>
++				<tr>
++					<th scope="row"><label for="efc-<?php echo esc_attr( $field ); ?>"><?php echo esc_html( $meta[0] ); ?></label></th>
++					<td>
++						<input type="number" min="0" max="10000" step="1" id="efc-<?php echo esc_attr( $field ); ?>" name="<?php echo esc_attr( $field ); ?>" value="<?php echo esc_attr( (string) (int) ( $settings[ $field ] ?? $meta[1] ) ); ?>" style="width:7em">
++						<p class="description"><?php echo esc_html( $meta[2] ); ?></p>
++					</td>
++				</tr>
++			<?php endforeach; ?>
++		</table>
++
++		<?php if ( null !== $quota ) : ?>
++			<p>
++				<?php
++				printf(
++					/* translators: 1: requests today, 2: daily cap */
++					esc_html__( 'Today: %1$s of %2$s AI requests used.', 'english-finders-core' ),
++					esc_html( number_format_i18n( $quota->site_used_today() ) ),
++					esc_html( number_format_i18n( $quota->site_cap() ) )
++				);
++				?>
++			</p>
++			<?php $usage = array_slice( $ai->usage(), 0, 7, true ); ?>
++			<?php if ( ! empty( $usage ) ) : ?>
++				<table class="widefat striped" style="max-width:46em;margin-bottom:1em">
++					<thead>
++						<tr>
++							<th><?php esc_html_e( 'Day', 'english-finders-core' ); ?></th>
++							<th><?php esc_html_e( 'Requests', 'english-finders-core' ); ?></th>
++							<th><?php esc_html_e( 'Failed', 'english-finders-core' ); ?></th>
++							<th><?php esc_html_e( 'Input tokens', 'english-finders-core' ); ?></th>
++							<th><?php esc_html_e( 'Output tokens', 'english-finders-core' ); ?></th>
++						</tr>
++					</thead>
++					<tbody>
++					<?php foreach ( $usage as $day => $row ) : ?>
++						<tr>
++							<td><?php echo esc_html( (string) $day ); ?></td>
++							<td><?php echo esc_html( number_format_i18n( (int) $row['requests'] ) ); ?></td>
++							<td><?php echo esc_html( number_format_i18n( (int) $row['failed'] ) ); ?></td>
++							<td><?php echo esc_html( number_format_i18n( (int) $row['prompt_tokens'] ) ); ?></td>
++							<td><?php echo esc_html( number_format_i18n( (int) $row['completion_tokens'] ) ); ?></td>
++						</tr>
++					<?php endforeach; ?>
++					</tbody>
++				</table>
++			<?php endif; ?>
++		<?php endif; ?>
++		<?php
++	}
++
+ 	public function handle_save(): void {
+ 		if ( ! current_user_can( self::CAPABILITY ) ) {
+ 			wp_die( esc_html__( 'You do not have permission to do this.', 'english-finders-core' ) );
+@@ -276,6 +373,21 @@ final class SettingsPage {
+ 			}
+ 		}
+ 
++		// 1.16.0: AI features.
++		$settings['ai_enabled'] = ! empty( $_POST['ai_enabled'] );
++
++		$ai_model = isset( $_POST['ai_model'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['ai_model'] ) ) ) : '';
++		$ai_model = (string) preg_replace( '/[^A-Za-z0-9_\-:.\/]/', '', $ai_model );
++		$settings['ai_model'] = '' !== $ai_model ? $ai_model : \EnglishFindersCore\Ai\OpenRouterTextClient::DEFAULT_MODEL;
++
++		foreach ( array(
++			'ai_free_daily'     => \EnglishFindersCore\Ai\AiQuota::DEFAULT_FREE_DAILY,
++			'ai_pro_daily'      => \EnglishFindersCore\Ai\AiQuota::DEFAULT_PRO_DAILY,
++			'ai_site_daily_cap' => \EnglishFindersCore\Ai\AiQuota::DEFAULT_SITE_CAP,
++		) as $field => $default ) {
++			$settings[ $field ] = isset( $_POST[ $field ] ) ? min( 10000, absint( wp_unslash( $_POST[ $field ] ) ) ) : $default;
++		}
++
+ 		update_option( self::OPTION, $settings, false );
+ 
+ 		wp_safe_redirect( add_query_arg( 'efc_notice', 'saved', admin_url( 'options-general.php?page=' . self::MENU_SLUG ) ) );
+diff --git a/english-finders-core/src/Ai/AiQuota.php b/english-finders-core/src/Ai/AiQuota.php
+new file mode 100644
+index 0000000..782d9e3
+--- /dev/null
++++ b/english-finders-core/src/Ai/AiQuota.php
+@@ -0,0 +1,162 @@
++<?php
++/**
++ * Daily AI usage limits.
++ *
++ * Two limits, checked together on every paid request:
++ *
++ * - A per-user daily allowance: a small number for free accounts, a larger one
++ *   for Pro (owner's decision 2026-09-29: AI feedback is the Pro benefit, which
++ *   ties the running cost to paying users).
++ * - A site-wide daily cap, the backstop that bounds the whole site's spend on a
++ *   bad day (a bug, a burst of new accounts) regardless of any one user.
++ *
++ * Counts reset at midnight site time. A request that fails at the provider is
++ * refunded, so an outage never eats a learner's allowance.
++ *
++ * Storage is deliberately light: a user meta row per user and one option for
++ * the site total. Two requests racing can each pass the check before either
++ * increments; the worst case is one extra request, which is acceptable for a
++ * cost guard that is itself bounded by the site cap.
++ *
++ * @package EnglishFindersCore
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersCore\Ai;
++
++use EnglishFindersCore\Database\Installer;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class AiQuota {
++	private const USER_META   = 'efc_ai_daily';
++	private const SITE_OPTION = 'efc_ai_site_daily';
++
++	public const DEFAULT_FREE_DAILY = 3;
++	public const DEFAULT_PRO_DAILY  = 30;
++	public const DEFAULT_SITE_CAP   = 300;
++
++	/** @var callable(int):bool Whether a user has Pro. */
++	private $is_pro;
++
++	/**
++	 * @param callable(int):bool $is_pro Resolves Pro status (the entitlements service in production).
++	 */
++	public function __construct( callable $is_pro ) {
++		$this->is_pro = $is_pro;
++	}
++
++	public function daily_limit( int $user_id ): int {
++		if ( $user_id <= 0 ) {
++			return 0;
++		}
++
++		return $this->daily_limit_for( (bool) ( $this->is_pro )( $user_id ) );
++	}
++
++	/**
++	 * The daily allowance for a free or a Pro account, e.g. to tell a guest
++	 * what signing up (or upgrading) gives them.
++	 *
++	 * @param bool $pro Pro allowance rather than free.
++	 */
++	public function daily_limit_for( bool $pro ): int {
++		$key     = $pro ? 'ai_pro_daily' : 'ai_free_daily';
++		$default = $pro ? self::DEFAULT_PRO_DAILY : self::DEFAULT_FREE_DAILY;
++
++		return max( 0, (int) ( $this->settings()[ $key ] ?? $default ) );
++	}
++
++	public function is_pro( int $user_id ): bool {
++		return $user_id > 0 && (bool) ( $this->is_pro )( $user_id );
++	}
++
++	public function used_today( int $user_id ): int {
++		if ( $user_id <= 0 ) {
++			return 0;
++		}
++
++		$row = get_user_meta( $user_id, self::USER_META, true );
++
++		return is_array( $row ) && ( $row['d'] ?? '' ) === $this->today() ? (int) ( $row['n'] ?? 0 ) : 0;
++	}
++
++	public function remaining( int $user_id ): int {
++		return max( 0, $this->daily_limit( $user_id ) - $this->used_today( $user_id ) );
++	}
++
++	public function site_used_today(): int {
++		$row = get_option( self::SITE_OPTION, array() );
++
++		return is_array( $row ) && ( $row['d'] ?? '' ) === $this->today() ? (int) ( $row['n'] ?? 0 ) : 0;
++	}
++
++	public function site_cap(): int {
++		return max( 0, (int) ( $this->settings()['ai_site_daily_cap'] ?? self::DEFAULT_SITE_CAP ) );
++	}
++
++	/**
++	 * Reserve one request for a user.
++	 *
++	 * @param int $user_id The learner.
++	 * @return string Empty on success, otherwise why not: 'user' (this user's
++	 *                allowance is used up) or 'site' (the site cap is reached).
++	 */
++	public function reserve( int $user_id ): string {
++		if ( $this->remaining( $user_id ) <= 0 ) {
++			return 'user';
++		}
++		if ( $this->site_used_today() >= $this->site_cap() ) {
++			return 'site';
++		}
++
++		$this->bump( $user_id, 1 );
++
++		return '';
++	}
++
++	/**
++	 * Give a reserved request back (the provider failed, so nothing was used).
++	 *
++	 * @param int $user_id The learner.
++	 */
++	public function refund( int $user_id ): void {
++		$this->bump( $user_id, -1 );
++	}
++
++	private function bump( int $user_id, int $delta ): void {
++		$today = $this->today();
++
++		update_user_meta(
++			$user_id,
++			self::USER_META,
++			array(
++				'd' => $today,
++				'n' => max( 0, $this->used_today( $user_id ) + $delta ),
++			)
++		);
++
++		update_option(
++			self::SITE_OPTION,
++			array(
++				'd' => $today,
++				'n' => max( 0, $this->site_used_today() + $delta ),
++			),
++			false
++		);
++	}
++
++	private function today(): string {
++		return wp_date( 'Y-m-d' );
++	}
++
++	/** @return array<string,mixed> */
++	private function settings(): array {
++		$settings = get_option( Installer::SETTINGS_OPTION, array() );
++
++		return is_array( $settings ) ? $settings : array();
++	}
++}
+diff --git a/english-finders-core/src/Ai/AiService.php b/english-finders-core/src/Ai/AiService.php
+new file mode 100644
+index 0000000..54ccb2a
+--- /dev/null
++++ b/english-finders-core/src/Ai/AiService.php
+@@ -0,0 +1,168 @@
++<?php
++/**
++ * The `ai` service: the one entry point for paid text generation.
++ *
++ * English Finders Study (and anything later) asks this service, never the
++ * HTTP client, so the on/off switch, the daily limits and the usage log apply
++ * to every AI feature in one place:
++ *
++ *   $ai = Api::service( 'ai' );
++ *   if ( $ai->is_enabled() && '' === $ai->quota()->reserve( $user_id ) ) {
++ *       $result = $ai->complete_json( $system, $user_text );
++ *       if ( is_wp_error( $result ) ) { $ai->quota()->refund( $user_id ); }
++ *   }
++ *
++ * Off by default (`ai_enabled`), for the same reason speech generation is: an
++ * unattended install must never start making paid calls on its own.
++ *
++ * @package EnglishFindersCore
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersCore\Ai;
++
++use EnglishFindersCore\Database\Installer;
++use WP_Error;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class AiService {
++	private const USAGE_OPTION = 'efc_ai_usage';
++
++	/** Days of usage history kept for the settings screen. */
++	private const USAGE_DAYS = 60;
++
++	public function __construct(
++		private readonly OpenRouterTextClient $client,
++		private readonly AiQuota $quota
++	) {}
++
++	/** Switched on in settings, and a key is available. */
++	public function is_enabled(): bool {
++		$settings = get_option( Installer::SETTINGS_OPTION, array() );
++
++		return is_array( $settings ) && ! empty( $settings['ai_enabled'] ) && $this->client->is_configured();
++	}
++
++	public function quota(): AiQuota {
++		return $this->quota;
++	}
++
++	public function model(): string {
++		return $this->client->model();
++	}
++
++	/**
++	 * Ask for a JSON object and return it decoded.
++	 *
++	 * The model is told to answer with JSON only; this still tolerates a code
++	 * fence or a sentence around the object, because a model occasionally adds
++	 * one and failing the learner's request over it would waste their check.
++	 *
++	 * @param string $system     Instructions.
++	 * @param string $user       The content to work on.
++	 * @param int    $max_tokens Output cap.
++	 * @return array<string,mixed>|WP_Error
++	 */
++	public function complete_json( string $system, string $user, int $max_tokens = 1200 ): array|WP_Error {
++		if ( ! $this->is_enabled() ) {
++			return new WP_Error( 'efc_ai_disabled', __( 'AI features are switched off.', 'english-finders-core' ) );
++		}
++
++		$result = $this->client->complete(
++			array(
++				array(
++					'role'    => 'system',
++					'content' => $system,
++				),
++				array(
++					'role'    => 'user',
++					'content' => $user,
++				),
++			),
++			$max_tokens
++		);
++
++		if ( is_wp_error( $result ) ) {
++			$this->log( 0, 0, false );
++			return $result;
++		}
++
++		$this->log( $result['prompt_tokens'], $result['completion_tokens'], true );
++
++		$decoded = self::extract_json( $result['content'] );
++		if ( null === $decoded ) {
++			return new WP_Error( 'efc_ai_bad_json', __( 'The AI answer could not be read.', 'english-finders-core' ) );
++		}
++
++		return $decoded;
++	}
++
++	/**
++	 * The first JSON object in a string, or null.
++	 *
++	 * @param string $text Model output.
++	 * @return array<string,mixed>|null
++	 */
++	public static function extract_json( string $text ): ?array {
++		$text = trim( $text );
++
++		$decoded = json_decode( $text, true );
++		if ( is_array( $decoded ) ) {
++			return $decoded;
++		}
++
++		$start = strpos( $text, '{' );
++		$end   = strrpos( $text, '}' );
++		if ( false === $start || false === $end || $end <= $start ) {
++			return null;
++		}
++
++		$decoded = json_decode( substr( $text, $start, $end - $start + 1 ), true );
++
++		return is_array( $decoded ) ? $decoded : null;
++	}
++
++	/**
++	 * Daily usage history, newest first.
++	 *
++	 * @return array<string,array{requests:int,failed:int,prompt_tokens:int,completion_tokens:int}>
++	 */
++	public function usage(): array {
++		$log = get_option( self::USAGE_OPTION, array() );
++		if ( ! is_array( $log ) ) {
++			return array();
++		}
++
++		krsort( $log );
++
++		return $log;
++	}
++
++	private function log( int $prompt_tokens, int $completion_tokens, bool $ok ): void {
++		$log = get_option( self::USAGE_OPTION, array() );
++		$log = is_array( $log ) ? $log : array();
++		$day = wp_date( 'Y-m-d' );
++
++		$row = $log[ $day ] ?? array(
++			'requests'          => 0,
++			'failed'            => 0,
++			'prompt_tokens'     => 0,
++			'completion_tokens' => 0,
++		);
++
++		++$row['requests'];
++		if ( ! $ok ) {
++			++$row['failed'];
++		}
++		$row['prompt_tokens']     += $prompt_tokens;
++		$row['completion_tokens'] += $completion_tokens;
++		$log[ $day ]               = $row;
++
++		krsort( $log );
++		update_option( self::USAGE_OPTION, array_slice( $log, 0, self::USAGE_DAYS, true ), false );
++	}
++}
+diff --git a/english-finders-core/src/Ai/OpenRouterTextClient.php b/english-finders-core/src/Ai/OpenRouterTextClient.php
+new file mode 100644
+index 0000000..1262aff
+--- /dev/null
++++ b/english-finders-core/src/Ai/OpenRouterTextClient.php
+@@ -0,0 +1,129 @@
++<?php
++/**
++ * OpenRouter chat-completion client.
++ *
++ * The text counterpart of Audio\OpenRouterTtsProvider: the same key, the same
++ * single bill, and a model that is a settings value rather than code. Callers
++ * never use this class directly -- they go through the `ai` service
++ * (Ai\AiService), which owns the on/off switch and the usage limits. Keeping
++ * the HTTP detail here means a later move to a direct vendor connection is one
++ * new class, with nothing upstream changing.
++ *
++ * @package EnglishFindersCore
++ */
++
++declare(strict_types=1);
++
++namespace EnglishFindersCore\Ai;
++
++use EnglishFindersCore\Database\Installer;
++use WP_Error;
++
++if ( ! defined( 'ABSPATH' ) ) {
++	exit;
++}
++
++final class OpenRouterTextClient {
++	private const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
++
++	/** Feedback on a few hundred words takes a while on a cold model; a web request should not wait longer. */
++	private const TIMEOUT = 45;
++
++	public const DEFAULT_MODEL = 'anthropic/claude-haiku-4.5';
++
++	/** Hard ceiling on output, whatever a caller asks for, so one request can never turn into a large bill. */
++	private const MAX_TOKENS_CEILING = 2000;
++
++	public function is_configured(): bool {
++		return '' !== $this->api_key();
++	}
++
++	public function model(): string {
++		$model = trim( (string) ( $this->settings()['ai_model'] ?? '' ) );
++
++		return '' !== $model ? $model : self::DEFAULT_MODEL;
++	}
++
++	/**
++	 * Run one chat completion.
++	 *
++	 * @param list<array{role:string,content:string}> $messages   Conversation, system message first.
++	 * @param int                                     $max_tokens Output cap (clamped to the ceiling).
++	 * @return array{content:string,model:string,prompt_tokens:int,completion_tokens:int}|WP_Error
++	 */
++	public function complete( array $messages, int $max_tokens = 1200 ): array|WP_Error {
++		$key = $this->api_key();
++		if ( '' === $key ) {
++			return new WP_Error( 'efc_ai_unconfigured', __( 'No AI API key is configured.', 'english-finders-core' ) );
++		}
++
++		$body = array(
++			'model'       => $this->model(),
++			'messages'    => $messages,
++			'max_tokens'  => max( 64, min( self::MAX_TOKENS_CEILING, $max_tokens ) ),
++			'temperature' => 0.2,
++		);
++
++		$response = wp_remote_post(
++			self::ENDPOINT,
++			array(
++				'timeout' => self::TIMEOUT,
++				'headers' => array(
++					'Authorization' => 'Bearer ' . $key,
++					'Content-Type'  => 'application/json',
++					'HTTP-Referer'  => home_url( '/' ),
++					'X-Title'       => 'English Finders',
++				),
++				'body'    => (string) wp_json_encode( $body ),
++			)
++		);
++
++		if ( is_wp_error( $response ) ) {
++			return new WP_Error( 'efc_ai_http', $response->get_error_message() );
++		}
++
++		$status = (int) wp_remote_retrieve_response_code( $response );
++		$data   = json_decode( (string) wp_remote_retrieve_body( $response ), true );
++
++		if ( 200 !== $status || ! is_array( $data ) ) {
++			$detail = is_array( $data ) ? (string) ( $data['error']['message'] ?? '' ) : '';
++
++			return new WP_Error(
++				'efc_ai_status',
++				__( 'The AI provider returned an error.', 'english-finders-core' ),
++				array(
++					'status' => $status,
++					'detail' => substr( $detail, 0, 500 ),
++				)
++			);
++		}
++
++		$content = (string) ( $data['choices'][0]['message']['content'] ?? '' );
++		if ( '' === trim( $content ) ) {
++			return new WP_Error( 'efc_ai_empty', __( 'The AI provider returned an empty answer.', 'english-finders-core' ) );
++		}
++
++		return array(
++			'content'           => $content,
++			'model'             => (string) ( $data['model'] ?? $body['model'] ),
++			'prompt_tokens'     => (int) ( $data['usage']['prompt_tokens'] ?? 0 ),
++			'completion_tokens' => (int) ( $data['usage']['completion_tokens'] ?? 0 ),
++		);
++	}
++
++	/** Same precedence as the speech provider: a wp-config.php constant beats the stored setting. */
++	private function api_key(): string {
++		if ( defined( 'EFC_OPENROUTER_KEY' ) && is_string( EFC_OPENROUTER_KEY ) && '' !== trim( EFC_OPENROUTER_KEY ) ) {
++			return trim( EFC_OPENROUTER_KEY );
++		}
++
++		return trim( (string) ( $this->settings()['openrouter_key'] ?? '' ) );
++	}
++
++	/** @return array<string,mixed> */
++	private function settings(): array {
++		$settings = get_option( Installer::SETTINGS_OPTION, array() );
++
++		return is_array( $settings ) ? $settings : array();
++	}
++}
+diff --git a/english-finders-core/src/Database/Installer.php b/english-finders-core/src/Database/Installer.php
+index 0e193ff..890d434 100644
+--- a/english-finders-core/src/Database/Installer.php
++++ b/english-finders-core/src/Database/Installer.php
+@@ -90,6 +90,11 @@ final class Installer {
+ 			 */
+ 			'ai_provider'        => 'openrouter',
+ 			'ai_enabled'         => false,
++			// 1.16.0: AI writing feedback. Daily checks per user (free / Pro) and a site-wide daily cap on paid requests.
++			'ai_model'           => 'anthropic/claude-haiku-4.5',
++			'ai_free_daily'      => 3,
++			'ai_pro_daily'       => 30,
++			'ai_site_daily_cap'  => 300,
+ 			'tts_provider'       => 'openrouter',
+ 			/*
+ 			 * Off by default. Enabling it without a key does nothing, but an
+diff --git a/english-finders-core/src/Plugin.php b/english-finders-core/src/Plugin.php
+index 43e00a6..4a18e09 100644
+--- a/english-finders-core/src/Plugin.php
++++ b/english-finders-core/src/Plugin.php
+@@ -10,6 +10,9 @@ declare(strict_types=1);
+ namespace EnglishFindersCore;
+ 
+ use EnglishFindersCore\Activity\ActivityRecorder;
++use EnglishFindersCore\Ai\AiQuota;
++use EnglishFindersCore\Ai\AiService;
++use EnglishFindersCore\Ai\OpenRouterTextClient;
+ use EnglishFindersCore\Admin\SettingsPage;
+ use EnglishFindersCore\Admin\UsagePage;
+ use EnglishFindersCore\Assessment\LevelResultRepository;
+@@ -209,6 +212,20 @@ final class Plugin {
+ 		 * browser's ef:progress events. See UsageRepository's own docblock.
+ 		 */
+ 		$this->singleton( 'usage', static fn (): UsageRepository => new UsageRepository() );
++
++		/*
++		 * Paid text generation (1.16.0), first used by English Finders
++		 * Study's Writing Feedback tool. Off unless `ai_enabled` is set; the
++		 * quota asks the entitlements service who has Pro, since Pro users get
++		 * a larger daily allowance. See AiService's own docblock.
++		 */
++		$this->singleton(
++			'ai',
++			fn (): AiService => new AiService(
++				new OpenRouterTextClient(),
++				new AiQuota( fn ( int $user_id ): bool => $this->get( 'entitlements' )->for_user( $user_id )->unlocks_pro() )
++			)
++		);
+ 	}
+ 
+ 	/**
+diff --git a/english-finders-core/tests/test_ai.php b/english-finders-core/tests/test_ai.php
+new file mode 100644
+index 0000000..a532439
+--- /dev/null
++++ b/english-finders-core/tests/test_ai.php
+@@ -0,0 +1,104 @@
++<?php
++/**
++ * AiService::extract_json() and AiQuota assertions (1.16.0).
++ *
++ * Standalone, no WordPress needed: php tests/test_ai.php
++ *
++ * @package EnglishFindersCore
++ */
++
++namespace EnglishFindersCore\Database {
++	define( 'ABSPATH', __DIR__ . '/' );
++
++	final class Installer {
++		public const SETTINGS_OPTION = 'efc_settings';
++	}
++}
++
++namespace {
++	// Minimal WordPress stand-ins backed by arrays.
++	$GLOBALS['efc_test_options'] = array();
++	$GLOBALS['efc_test_meta']    = array();
++	$GLOBALS['efc_test_day']     = '2026-09-29';
++
++	function get_option( $name, $fallback = false ) {
++		return $GLOBALS['efc_test_options'][ $name ] ?? $fallback;
++	}
++	function update_option( $name, $value, $autoload = null ) {
++		$GLOBALS['efc_test_options'][ $name ] = $value;
++		return true;
++	}
++	function get_user_meta( $user_id, $key, $single = false ) {
++		return $GLOBALS['efc_test_meta'][ $user_id ][ $key ] ?? '';
++	}
++	function update_user_meta( $user_id, $key, $value ) {
++		$GLOBALS['efc_test_meta'][ $user_id ][ $key ] = $value;
++		return true;
++	}
++	function wp_date( $format ) {
++		return $GLOBALS['efc_test_day'];
++	}
++
++	require dirname( __DIR__ ) . '/src/Ai/OpenRouterTextClient.php';
++	require dirname( __DIR__ ) . '/src/Ai/AiQuota.php';
++	require dirname( __DIR__ ) . '/src/Ai/AiService.php';
++
++	use EnglishFindersCore\Ai\AiQuota;
++	use EnglishFindersCore\Ai\AiService;
++
++	$efc_count = 0;
++	$efc_ok    = static function ( bool $cond, string $message ) use ( &$efc_count ): void {
++		if ( ! $cond ) {
++			fwrite( STDERR, "FAIL: {$message}\n" );
++			exit( 1 );
++		}
++		++$efc_count;
++	};
++
++	// extract_json().
++	$efc_ok( array( 'a' => 1 ) === AiService::extract_json( '{"a":1}' ), 'plain JSON' );
++	$efc_ok( array( 'a' => 1 ) === AiService::extract_json( "```json\n{\"a\":1}\n```" ), 'code fence' );
++	$efc_ok( array( 'a' => array( 'b' => 2 ) ) === AiService::extract_json( 'Here you go: {"a":{"b":2}} Thanks!' ), 'surrounding text' );
++	$efc_ok( null === AiService::extract_json( 'no json here' ), 'no object' );
++	$efc_ok( null === AiService::extract_json( '{broken' ), 'unterminated' );
++	$efc_ok( null === AiService::extract_json( '' ), 'empty' );
++
++	// AiQuota with defaults: user 1 free, user 2 Pro.
++	$quota = new AiQuota( static fn ( int $id ): bool => 2 === $id );
++
++	$efc_ok( 0 === $quota->daily_limit( 0 ), 'guests have no allowance' );
++	$efc_ok( AiQuota::DEFAULT_FREE_DAILY === $quota->daily_limit( 1 ), 'free default' );
++	$efc_ok( AiQuota::DEFAULT_PRO_DAILY === $quota->daily_limit( 2 ), 'Pro default' );
++	$efc_ok( 'user' === $quota->reserve( 0 ), 'guest cannot reserve' );
++
++	for ( $i = 0; $i < AiQuota::DEFAULT_FREE_DAILY; $i++ ) {
++		$efc_ok( '' === $quota->reserve( 1 ), 'free reserve ' . $i );
++	}
++	$efc_ok( 0 === $quota->remaining( 1 ), 'free allowance used' );
++	$efc_ok( 'user' === $quota->reserve( 1 ), 'free over limit refused' );
++
++	$quota->refund( 1 );
++	$efc_ok( 1 === $quota->remaining( 1 ), 'refund gives one back' );
++	$efc_ok( 2 === $quota->site_used_today(), 'refund also lowers the site count' );
++
++	$GLOBALS['efc_test_day'] = '2026-09-30';
++	$efc_ok( AiQuota::DEFAULT_FREE_DAILY === $quota->remaining( 1 ), 'new day resets the user' );
++	$efc_ok( 0 === $quota->site_used_today(), 'new day resets the site' );
++
++	// Settings override the defaults, and the site cap applies to everyone.
++	$GLOBALS['efc_test_options']['efc_settings'] = array(
++		'ai_free_daily'     => 5,
++		'ai_pro_daily'      => 50,
++		'ai_site_daily_cap' => 2,
++	);
++	$efc_ok( 5 === $quota->daily_limit( 1 ) && 50 === $quota->daily_limit( 2 ), 'limits from settings' );
++	$efc_ok( 5 === $quota->daily_limit_for( false ) && 50 === $quota->daily_limit_for( true ), 'limits by plan' );
++	$efc_ok( '' === $quota->reserve( 2 ) && '' === $quota->reserve( 1 ), 'two under the cap' );
++	$efc_ok( 'site' === $quota->reserve( 2 ), 'site cap refuses even Pro' );
++
++	$quota->refund( 1 );
++	$quota->refund( 1 );
++	$efc_ok( 0 === $quota->used_today( 1 ), 'refund never goes negative' );
++
++	echo "{$efc_count} assertions OK\n";
++}

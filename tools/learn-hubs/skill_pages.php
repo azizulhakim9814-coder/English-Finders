@@ -15,7 +15,7 @@ $efl_skills = array(
 		'Writing',
 		'Good writing turns what you know into something a reader can follow. Build sentences, fix mistakes and learn to write messages, emails and essays.',
 		array( '#059669', '#0D9488', 'fa-pen-nib' ),
-		array( 'sentence-builder', 'error-correction', 'grammar-quiz', 'spelling-quiz' ),
+		array( 'writing-feedback', 'sentence-builder', 'error-correction', 'grammar-quiz', 'spelling-quiz' ),
 		array( 35009, 35095, 35102, 35307, 35308, 35388, 35402, 35495, 35586 ),
 		array( 'writing', 'essays' ),
 		'[efs_sentence_builder breadcrumb="0" schema="0"]',
@@ -47,6 +47,7 @@ $efl_tool_cards = array(
 	'match-the-definition'      => array( 'Match The Definition', '#EC4899', '#DB2777', 'fa-link', 'Vocabulary', 'Connect words with their correct meanings to build the vocabulary you need for reading.' ),
 	'error-correction'          => array( 'Error Correction', '#7C3AED', '#4338CA', 'fa-check-double', 'Grammar', 'Spot and fix the mistake in each sentence, the same skill you use to check your own writing.' ),
 	'sentence-builder'          => array( 'Sentence Builder', '#059669', '#0D9488', 'fa-arrows-turn-to-dots', 'Writing', 'Put the words in the right order to build correct sentences.' ),
+	'writing-feedback'          => array( 'AI Writing Feedback', '#14B8A6', '#0E7490', 'fa-pen-fancy', 'Writing', 'Write a short text at your level and get corrections with explanations, a corrected version and one thing to work on next.' ),
 	'pronunciation-practice'    => array( 'Pronunciation Practice', '#DB2777', '#9D174D', 'fa-microphone', 'Speaking', 'Listen to native audio, say the word out loud and check your pronunciation.' ),
 	'english-dictionary-search' => array( 'English Dictionary', '#64748B', '#334155', 'fa-volume-up', 'Audio', 'Look up any word to hear its pronunciation, with meanings, examples and its CEFR level.' ),
 );

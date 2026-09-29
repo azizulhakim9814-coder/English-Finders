@@ -103,6 +103,33 @@ final class ProOffer {
 		return (bool) apply_filters( 'efa_pro_promo_enabled', self::on_sale() && '1' === (string) get_option( self::PROMO_OPTION, '0' ) );
 	}
 
+	/**
+	 * Daily AI writing checks for Free and Pro (0.21.0), or null while AI
+	 * feedback is unavailable (Core older than 1.16.0, or AI switched off in
+	 * Core's settings) -- so the plans never promise a feature that is off.
+	 * The numbers are Core's settings, not copy here, so they cannot drift.
+	 *
+	 * @return array{free:int,pro:int}|null
+	 */
+	public static function ai_allowances(): ?array {
+		if ( ! class_exists( '\\EnglishFindersCore\\Support\\Api' ) || ! Api::is_at_least( '1.16.0' ) ) {
+			return null;
+		}
+
+		$ai = Api::service( 'ai' );
+		if ( ! $ai instanceof \EnglishFindersCore\Ai\AiService || ! $ai->is_enabled() ) {
+			return null;
+		}
+
+		$free = $ai->quota()->daily_limit_for( false );
+		$pro  = $ai->quota()->daily_limit_for( true );
+
+		return $pro > 0 ? array(
+			'free' => $free,
+			'pro'  => $pro,
+		) : null;
+	}
+
 	/** EFC_PADDLE_WEBHOOK_SECRET in wp-config.php (or Core's setting). Never read out, only checked. */
 	public static function webhook_secret_set(): bool {
 		return ( defined( 'EFC_PADDLE_WEBHOOK_SECRET' ) && is_string( EFC_PADDLE_WEBHOOK_SECRET ) && '' !== EFC_PADDLE_WEBHOOK_SECRET )

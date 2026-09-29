@@ -10,6 +10,9 @@ declare(strict_types=1);
 namespace EnglishFindersCore;
 
 use EnglishFindersCore\Activity\ActivityRecorder;
+use EnglishFindersCore\Ai\AiQuota;
+use EnglishFindersCore\Ai\AiService;
+use EnglishFindersCore\Ai\OpenRouterTextClient;
 use EnglishFindersCore\Admin\SettingsPage;
 use EnglishFindersCore\Admin\UsagePage;
 use EnglishFindersCore\Assessment\LevelResultRepository;
@@ -209,6 +212,20 @@ final class Plugin {
 		 * browser's ef:progress events. See UsageRepository's own docblock.
 		 */
 		$this->singleton( 'usage', static fn (): UsageRepository => new UsageRepository() );
+
+		/*
+		 * Paid text generation (1.16.0), first used by English Finders
+		 * Study's Writing Feedback tool. Off unless `ai_enabled` is set; the
+		 * quota asks the entitlements service who has Pro, since Pro users get
+		 * a larger daily allowance. See AiService's own docblock.
+		 */
+		$this->singleton(
+			'ai',
+			fn (): AiService => new AiService(
+				new OpenRouterTextClient(),
+				new AiQuota( fn ( int $user_id ): bool => $this->get( 'entitlements' )->for_user( $user_id )->unlocks_pro() )
+			)
+		);
 	}
 
 	/**
